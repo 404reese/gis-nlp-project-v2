@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>GeoSpatial Intelligence System</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=EB+Garamond:wght@400;500;600;700;800&amp;family=Manrope:wght@300;400;500;600;700&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+        rel="stylesheet" />
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "outline-variant": "#d8d0c8",
+                        "on-tertiary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "surface": "#faf5ee",
+                        "surface-bright": "#faf5ee",
+                        "on-secondary-fixed-variant": "#504840",
+                        "tertiary-container": "#d47070",
+                        "background": "#faf5ee",
+                        "surface-dim": "#dcd6cc",
+                        "on-tertiary-fixed-variant": "#6e3030",
+                        "on-primary-container": "#fbe8d8",
+                        "secondary-fixed-dim": "#cec6be",
+                        "error-container": "#fce4e0",
+                        "on-secondary-fixed": "#2a2420",
+                        "secondary-container": "#eae2da",
+                        "primary": "#c2652a",
+                        "on-surface": "#3a302a",
+                        "error": "#c0392b",
+                        "primary-container": "#e08850",
+                        "surface-container": "#f2ece4",
+                        "secondary": "#78706a",
+                        "on-primary-fixed": "#401a08",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#605850",
+                        "inverse-primary": "#f0a878",
+                        "on-tertiary-container": "#3a2020",
+                        "surface-container-high": "#ece6dc",
+                        "surface-container-low": "#f6f0e8",
+                        "on-surface-variant": "#605850",
+                        "surface-container-highest": "#e6e0d6",
+                        "on-tertiary-fixed": "#2e1515",
+                        "primary-fixed-dim": "#f0a878",
+                        "on-error-container": "#7a1a10",
+                        "tertiary": "#8c3c3c",
+                        "tertiary-fixed": "#fce0e0",
+                        "tertiary-fixed-dim": "#e8a0a0",
+                        "surface-tint": "#c2652a",
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-surface": "#3a302a",
+                        "primary-fixed": "#fbe8d8",
+                        "on-background": "#3a302a",
+                        "inverse-on-surface": "#faf5ee",
+                        "surface-variant": "#ece6dc",
+                        "on-primary-fixed-variant": "#8a4518",
+                        "secondary-fixed": "#eae2da",
+                        "outline": "#9a9088",
+                        "on-secondary": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "headline": ["EB Garamond", "serif"],
+                        "display": ["EB Garamond", "serif"],
+                        "body": ["Manrope", "sans-serif"],
+                        "label": ["Manrope", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Manrope', sans-serif;
+            background-color: #faf5ee;
+            color: #3a302a;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'EB Garamond', serif;
+        }
+
+        .shadow-soft {
+            box-shadow: 0 2px 16px rgba(58, 48, 42, 0.04);
+        }
+    </style>
+</head>
+
+<body class="bg-background text-on-background min-h-screen flex flex-col">
+    <!-- TopNavBar component -->
+    <nav
+        class="bg-[#faf5ee] dark:bg-stone-900 border-b border-stone-200/60 dark:border-stone-800 shadow-[0_2px_16px_rgba(58,48,42,0.04)] sticky top-0 z-50">
+        <div class="flex justify-between items-center w-full px-6 py-3 max-w-full">
+            <div class="flex items-center gap-8">
+                <a class="font-['EB_Garamond'] text-2xl font-bold text-[#c2652a] dark:text-orange-500"
+                    href="#">Sentinel</a>
+            </div>
+            <div class="flex items-center gap-4 text-[#c2652a] dark:text-orange-400">
+                <button
+                    class="hover:text-[#c2652a] dark:hover:text-orange-300 transition-colors duration-200 ease-in-out">
+                    <span class="material-symbols-outlined">notifications</span>
+                </button>
+                <button
+                    class="hover:text-[#c2652a] dark:hover:text-orange-300 transition-colors duration-200 ease-in-out">
+                    <span class="material-symbols-outlined">settings</span>
+                </button>
+                <img alt="User profile" class="h-8 w-8 rounded-full border border-outline-variant object-cover"
+                    data-alt="A close up portrait of a professional individual in a minimalist, sun-baked setting, featuring warm earth tones and subtle lighting typical of a high-end corporate identity."
+                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAu5UxLBYsVyuikAijel8i7uT9aO7isKqGMA6LVbY5VGpXxMHUtAKEt4ELqHCqoAR6X7NnlPQV11X-aJuv1Jqju4dpussa8U6f0nFpjpsVJTWyGR6X_PUpL4L2icSKcx1-931mIcphOlzlXy3brppHHjMYPHMROTjq3qQWWhEkWMXKuroUgGPguGEz4O9NlK1NRRof--Hi2x7jc038On_0NhICRtJZl3I6yhaRVbvvX76ah61A1ewsFzmsHlvv1fwmAtkPEmQVdg" />
+            </div>
+        </div>
+    </nav>
+    <!-- Hero Section -->
+    <main class="flex-grow">
+        <section class="max-w-7xl mx-auto px-6 py-24 md:py-32 flex flex-col md:flex-row items-center gap-12">
+            <div class="md:w-1/2 space-y-8">
+                <h1
+                    class="font-headline text-5xl md:text-6xl lg:text-7xl leading-tight text-on-surface font-semibold tracking-tight">
+                    AI-Powered Geospatial <br /><span class="text-primary italic">Decision Intelligence</span>
+                </h1>
+                <p class="font-body text-lg md:text-xl text-on-surface-variant max-w-lg leading-relaxed font-light">
+                    Elevate urban planning and resource allocation. Leverage advanced natural language processing and
+                    real-time mapping to decode complex spatial data into actionable, sun-baked insights.
+                </p>
+                <div class="pt-4">
+                    <button
+                        class="bg-primary text-on-primary font-body font-medium px-8 py-4 rounded-lg shadow-soft hover:bg-primary-container hover:text-on-primary-container transition-colors duration-300">
+                        Start Analysis
+                    </button>
+                </div>
+            </div>
+            <div class="md:w-1/2 w-full">
+                <div
+                    class="relative w-full aspect-square md:aspect-[4/3] rounded-2xl overflow-hidden shadow-soft border border-outline-variant/30">
+                    <img alt="Geospatial Map Concept" class="w-full h-full object-cover"
+                        data-alt="A stylized, modern high-altitude topographical map rendered in warm earth tones, burnt sienna, and warm linen white. The map shows elegant, minimalist contour lines and subtle heat map gradients, illuminated by soft, high-key warm lighting typical of a luxury editorial layout."
+                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuBsU45oDU3snmKVxfUwO8iY813bm5nF5bdKIqfEp4V2O06sJ3_ceqaVJ7nkmHWhCg5fBJ4c7w2g8HehHyH6BdlpeXXUl5ta0f2d6L4vljH8U1gxCHstJEQyMZ6xUPDOWkI3i2SMnyFnTYFlm2Y1V7mnk-DX3iOMZwPbl3v58BlYMPBjenY2GKefAf5ubPOSNnYVje--qfYUaQ46dHVWncPuUo4yM_VU3Z9edyCnxDyq6Oz-PEhF_AMoeBKsEzTLNo8XlzosSuU9OA" />
+                </div>
+            </div>
+        </section>
+        <!-- Features Bento Grid -->
+        <section class="max-w-7xl mx-auto px-6 py-20">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 auto-rows-[300px]">
+                <!-- Card 1: Large Span -->
+                <div
+                    class="md:col-span-2 bg-surface-container-low rounded-2xl p-8 border border-outline-variant/50 shadow-soft flex flex-col justify-between relative overflow-hidden group">
+                    <div class="relative z-10 space-y-4">
+                        <div
+                            class="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center text-primary mb-6">
+                            <span class="material-symbols-outlined text-2xl">map</span>
+                        </div>
+                        <h3 class="font-headline text-3xl font-medium text-on-surface">Smart Location Analysis</h3>
+                        <p class="font-body text-on-surface-variant max-w-md">
+                            Evaluate optimal sites using multi-layered demographic, topographic, and economic data
+                            models.
+                        </p>
+                    </div>
+                    <div
+                        class="absolute bottom-0 right-0 w-2/3 h-2/3 opacity-20 group-hover:opacity-40 transition-opacity duration-500">
+                        <img alt="Abstract architectural model" class="w-full h-full object-cover"
+                            data-alt="Abstract architectural lines and minimalist city planning models rendered in warm sienna and dusty rose tones under soft, diffused studio lighting."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBzcGFfhedR_8gtet50aV-dK-Vw4Vr2Sv2TTg3wkou9jbLZh-9MN5ICYiDI4zceRZQKaISHmAwyD1beRnFKAf5-hB7xkujMTo4jKRsN7t2VGA_RzD4IGC1J185ePXXjmRRfAuDd8BEXVI3AEARL7SmQia7MaZGkPFxYyTUwIYj0pi--z7tguY75b4KFYYxaWw0otJ9ZtDL9_I4byHwCiC5relMjL2TuVjRw0ecoIFhMgWAZ99qP1L57oIkMJq8tKkqZzgusEmfeVg" />
+                    </div>
+                </div>
+                <!-- Card 2 -->
+                <div
+                    class="bg-surface-container rounded-2xl p-8 border border-outline-variant/30 shadow-soft flex flex-col">
+                    <div
+                        class="h-10 w-10 bg-surface text-tertiary rounded-full flex items-center justify-center mb-6 shadow-sm">
+                        <span class="material-symbols-outlined">local_fire_department</span>
+                    </div>
+                    <h3 class="font-headline text-2xl font-medium text-on-surface mb-3">Real-time Heatmaps</h3>
+                    <p class="font-body text-sm text-on-surface-variant flex-grow">
+                        Visualize population density, traffic flow, and environmental changes as they happen.
+                    </p>
+                </div>
+                <!-- Card 3 -->
+                <div
+                    class="bg-surface-container rounded-2xl p-8 border border-outline-variant/30 shadow-soft flex flex-col">
+                    <div
+                        class="h-10 w-10 bg-surface text-primary rounded-full flex items-center justify-center mb-6 shadow-sm">
+                        <span class="material-symbols-outlined">forum</span>
+                    </div>
+                    <h3 class="font-headline text-2xl font-medium text-on-surface mb-3">NLP Query Engine</h3>
+                    <p class="font-body text-sm text-on-surface-variant flex-grow">
+                        Ask complex spatial questions in plain English and receive instant visual answers.
+                    </p>
+                </div>
+                <!-- Card 4: Span 2 -->
+                <div
+                    class="md:col-span-2 bg-surface-container-high rounded-2xl p-8 border border-outline-variant/40 shadow-soft flex items-center gap-8">
+                    <div class="flex-grow space-y-4">
+                        <div
+                            class="h-10 w-10 bg-surface text-on-surface rounded-full flex items-center justify-center mb-4 shadow-sm">
+                            <span class="material-symbols-outlined">account_tree</span>
+                        </div>
+                        <h3 class="font-headline text-2xl font-medium text-on-surface">Decision Support System</h3>
+                        <p class="font-body text-on-surface-variant">
+                            Simulate scenarios and predict outcomes with our proprietary AI models designed specifically
+                            for urban topology.
+                        </p>
+                    </div>
+                    <div class="hidden md:block w-1/3 aspect-square rounded-xl overflow-hidden opacity-80">
+                        <img alt="Data visualization graph" class="w-full h-full object-cover"
+                            data-alt="A minimalist data visualization showing interconnecting nodes and pathways, styled in deep warm grays, burnt sienna accents, and warm white backgrounds, maintaining a clean editorial aesthetic."
+                            src="https://lh3.googleusercontent.com/aida-public/AB6AXuBoM3-Tdpu6IKFAjUZNxnWdsaEc6v6sDdeu-jZk4BBQx1-hQ8SeE-vbNojfR8g5d3RuvY2yj8MQJo70uUEKwutJ07nLuJRqUyAHAfgHMxLxUBLMOWS3npM4JbRJYu6WQs-BaCZdvALL5y_0tUUXorhErG6bHQgZYc_OIGFzZQ0hD1Gp74-rCre5_BZ7GvTKHoQWMCPZ9wKhCD8AN4fdzXJvqVEMxAlcRkWhZtBtjfyy6Xxa_zXTzgTNqkpG9jf1ntsG5sJPgLrDHw" />
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    <!-- Footer Component -->
+    <footer class="bg-[#faf5ee] dark:bg-stone-950 border-t border-stone-200/60 dark:border-stone-800 w-full mt-auto">
+        <div class="flex justify-between items-center px-8 py-6 w-full max-w-7xl mx-auto">
+            <p class="font-['Manrope'] text-xs text-stone-500">© 2024 Sahara Geospatial. All rights reserved.</p>
+            <div class="flex gap-6 font-['Manrope'] text-xs text-stone-500">
+                <a class="text-[#c2652a] hover:text-stone-700 dark:hover:text-stone-200 underline opacity-80 hover:opacity-100 transition-opacity"
+                    href="#">Privacy Policy</a>
+                <a class="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 underline opacity-80 hover:opacity-100 transition-opacity"
+                    href="#">Terms of Service</a>
+                <a class="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 underline opacity-80 hover:opacity-100 transition-opacity"
+                    href="#">API Documentation</a>
+                <a class="text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 underline opacity-80 hover:opacity-100 transition-opacity"
+                    href="#">Support</a>
+            </div>
+        </div>
+    </footer>
+</body>
+
+</html>

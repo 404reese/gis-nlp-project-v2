@@ -1,0 +1,25 @@
+body {
+    font-family: 'Manrope', sans-serif;
+    background-color: #faf5ee;
+    color: #3a302a;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: 'EB Garamond', serif;
+}
+
+.shadow-soft {
+    box-shadow: 0 2px 16px rgba(58, 48, 42, 0.04);
+}
+
+/* React Leaflet styling */
+.leaflet-container {
+    width: 100%;
+    height: 100%;
+    z-index: 10;
+}
