@@ -11,10 +11,16 @@ LOCATIONS = []
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global LOCATIONS
-    file_path = os.path.join(os.path.dirname(__file__), "data", "dataset.json")
+    file_path = os.path.join(os.path.dirname(__file__), "data", "crime.json")
     try:
         with open(file_path, "r") as f:
-            LOCATIONS = json.load(f)
+            payload = json.load(f)
+            if isinstance(payload, dict):
+                LOCATIONS = payload.get("locations", [])
+            elif isinstance(payload, list):
+                LOCATIONS = payload
+            else:
+                LOCATIONS = []
     except FileNotFoundError:
         print(f"Dataset not found at {file_path}")
     yield
@@ -50,7 +56,13 @@ def rank_locations(filters: dict) -> list:
     Returns top 5 locations.
     """
     scored = []
+    if not isinstance(LOCATIONS, list):
+        return scored
+
     for loc in LOCATIONS:
+        if not isinstance(loc, dict):
+            continue
+
         score = (
             0.3 * loc.get("footfall", 0) +
             0.25 * loc.get("youth", 0) +

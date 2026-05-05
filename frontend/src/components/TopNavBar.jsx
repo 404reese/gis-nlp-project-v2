@@ -13,6 +13,9 @@ const TopNavBar = () => {
             <Link to="/query" className="font-body hover:text-[#c2652a] dark:hover:text-orange-400 transition-colors duration-200">
               Query
             </Link>
+            <Link to="/crimemap" className="font-body hover:text-[#c2652a] dark:hover:text-orange-400 transition-colors duration-200">
+              Crime Map
+            </Link>
             <Link to="/how-it-works" className="font-body hover:text-[#c2652a] dark:hover:text-orange-400 transition-colors duration-200">
               How It Works
             </Link>

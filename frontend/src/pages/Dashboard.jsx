@@ -101,7 +101,7 @@ const Dashboard = () => {
         ...prev,
         { sender: 'ai', text: result.text || 'Analysis complete.' }
       ]);
-      
+
       // If the query asks for a new map generation, we could potentially re-trigger the map logic here
       // if result.is_clear is true
       if (result.filters) {
@@ -138,10 +138,10 @@ const Dashboard = () => {
 
   const heatPoints = useMemo(() => {
     return locations
-      .map((location) => {
-        const lat = Number(location?.lat);
-        const lng = Number(location?.lng);
-        const factorValue = Number(location?.[heatmapFactor]);
+      .map((locationItem) => {
+        const lat = Number(locationItem?.lat);
+        const lng = Number(locationItem?.lng);
+        const factorValue = Number(locationItem?.[heatmapFactor]);
 
         if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(factorValue)) {
           return null;

@@ -103,6 +103,28 @@ const HeatLayer = ({ points, factorKey }) => {
   return null;
 };
 
+const MapSizeWatcher = () => {
+  const map = useMap();
+
+  useEffect(() => {
+    const container = map.getContainer();
+    const handleResize = () => map.invalidateSize();
+    const resizeObserver = new ResizeObserver(handleResize);
+    const timeoutId = window.setTimeout(handleResize, 0);
+
+    resizeObserver.observe(container);
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [map]);
+
+  return null;
+};
+
 const MapView = ({ areas, heatPoints, heatFactorKey, heatFactorLabel, heatFactorColor, heatmapEnabled }) => {
   const hasHeatPoints = heatmapEnabled && heatPoints && heatPoints.length > 0;
 
@@ -114,6 +136,7 @@ const MapView = ({ areas, heatPoints, heatFactorKey, heatFactorLabel, heatFactor
         scrollWheelZoom={true}
         className="w-full h-full"
       >
+        <MapSizeWatcher />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
