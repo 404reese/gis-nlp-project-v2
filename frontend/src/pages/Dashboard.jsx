@@ -1,26 +1,58 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import TopNavBar from '../components/TopNavBar';
 import MapView from '../components/MapView';
 import RightPanel from '../components/RightPanel';
-import ChatBox from '../components/ChatBox';
-import { generateMapData, explainResults, analyzeQuery } from '../services/api';
+import TopLocationsPanel from '../components/TopLocationsPanel';
+import LocationDetailPanel from '../components/LocationDetailPanel';
+import { generateMapData, explainResults, queryChat, getLocations } from '../services/api';
+
+const heatmapFactors = [
+  { key: 'footfall', label: 'Footfall', color: '#c2652a' },
+  { key: 'youth', label: 'Youth', color: '#2f855a' },
+  { key: 'rent', label: 'Rent', color: '#8b5cf6' },
+  { key: 'access', label: 'Access', color: '#0284c7' },
+  { key: 'competition', label: 'Competition', color: '#dc2626' },
+  { key: 'flood', label: 'Flood', color: '#0f766e' },
+  { key: 'traffic', label: 'Traffic', color: '#d97706' },
+];
 
 const Dashboard = () => {
   const location = useLocation();
   const initialQuery = location.state?.query || '';
   const initialMessages = location.state?.messages || [];
+  const initialChatId = location.state?.chatId || localStorage.getItem('sentinelChatId');
 
   const [areas, setAreas] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [explanation, setExplanation] = useState('');
   const [loadingMap, setLoadingMap] = useState(true);
   const [loadingExplanation, setLoadingExplanation] = useState(false);
+  const [heatmapFactor, setHeatmapFactor] = useState('footfall');
+  const [heatmapOpen, setHeatmapOpen] = useState(true);
+  const [heatmapEnabled, setHeatmapEnabled] = useState(true);
   
   // Chat state
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatId, setChatId] = useState(initialChatId);
+
+  // Location detail view state
+  const [selectedLocation, setSelectedLocation] = useState(null);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const dataset = await getLocations();
+        setLocations(Array.isArray(dataset) ? dataset : []);
+      } catch (error) {
+        console.error('Error fetching dataset locations:', error);
+      }
+    };
+
+    fetchLocations();
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,7 +70,7 @@ const Dashboard = () => {
         setLoadingMap(false);
         setLoadingExplanation(true);
 
-        const explainData = await explainResults({ query: initialQuery, data: mapData });
+        const explainData = await explainResults({ query: initialQuery, areas: mapData.areas || [] });
         setExplanation(explainData.explanation);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -60,15 +92,19 @@ const Dashboard = () => {
     setChatLoading(true);
 
     try {
-      const result = await analyzeQuery(userMessage);
+      const result = await queryChat({ message: userMessage, chatId });
+      if (result.chat_id) {
+        setChatId(result.chat_id);
+        localStorage.setItem('sentinelChatId', result.chat_id);
+      }
       setMessages((prev) => [
         ...prev,
-        { sender: 'ai', text: result.response || result.message || 'Analysis complete.' }
+        { sender: 'ai', text: result.text || 'Analysis complete.' }
       ]);
       
       // If the query asks for a new map generation, we could potentially re-trigger the map logic here
       // if result.is_clear is true
-      if (result.is_clear) {
+      if (result.filters) {
         setLoadingMap(true);
         const mapData = await generateMapData(userMessage);
         setAreas(mapData.areas || []);
@@ -76,7 +112,7 @@ const Dashboard = () => {
         setLoadingMap(false);
         setLoadingExplanation(true);
         
-        const explainData = await explainResults({ query: userMessage, data: mapData });
+        const explainData = await explainResults({ query: userMessage, areas: mapData.areas || [] });
         setExplanation(explainData.explanation);
         setLoadingExplanation(false);
       }
@@ -92,68 +128,103 @@ const Dashboard = () => {
     }
   };
 
+  const handleViewDetails = (area) => {
+    setSelectedLocation(area);
+  };
+
+  const handleCloseDetails = () => {
+    setSelectedLocation(null);
+  };
+
+  const heatPoints = useMemo(() => {
+    return locations
+      .map((location) => {
+        const lat = Number(location?.lat);
+        const lng = Number(location?.lng);
+        const factorValue = Number(location?.[heatmapFactor]);
+
+        if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(factorValue)) {
+          return null;
+        }
+
+        return [lat, lng, Math.min(1, Math.max(0, factorValue / 10))];
+      })
+      .filter(Boolean);
+  }, [locations, heatmapFactor]);
+
+  const heatmapLabel = useMemo(() => {
+    return heatmapFactors.find((factor) => factor.key === heatmapFactor)?.label || 'Footfall';
+  }, [heatmapFactor]);
+
+  const heatmapMeta = useMemo(() => {
+    return heatmapFactors.find((factor) => factor.key === heatmapFactor) || heatmapFactors[0];
+  }, [heatmapFactor]);
+
   return (
     <div className="min-h-screen flex flex-col bg-background relative overflow-hidden">
       <TopNavBar />
       
       <main className="flex-grow flex flex-col lg:flex-row p-4 lg:p-6 gap-6 h-[calc(100vh-73px)]">
-        {/* Left Side: Map Container */}
-        <div className="w-full lg:w-2/3 h-full relative">
-          {loadingMap && (
-            <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-surface-container-low/80 backdrop-blur-sm rounded-2xl border border-outline-variant/50">
-              <span className="material-symbols-outlined animate-spin text-4xl text-primary mb-4">refresh</span>
-              <h3 className="font-headline text-2xl font-bold text-on-surface">Generating map...</h3>
-              <p className="font-body text-on-surface-variant mt-2">Plotting geospatial data for: "{initialQuery}"</p>
-            </div>
-          )}
-          <MapView areas={areas} />
-        </div>
-
-        {/* Right Side: Details Panel */}
-        <div className="w-full lg:w-1/3 h-full overflow-hidden">
-          <RightPanel 
-            areas={areas} 
-            explanation={explanation} 
-            loadingExplanation={loadingExplanation} 
+        {selectedLocation ? (
+          /* Full-width Location Detail View (replaces LHS + Map + RHS) */
+          <LocationDetailPanel
+            area={selectedLocation}
+            onClose={handleCloseDetails}
+            query={initialQuery}
+            conversation={messages}
           />
-        </div>
-      </main>
-
-      {/* Floating Chat Box Toggle */}
-      <div className="fixed bottom-6 right-6 z-50">
-        {!isChatOpen ? (
-          <button 
-            onClick={() => setIsChatOpen(true)}
-            className="h-14 w-14 bg-primary text-on-primary rounded-full shadow-soft flex items-center justify-center hover:bg-primary-container transition-transform hover:scale-105 active:scale-95"
-          >
-            <span className="material-symbols-outlined text-2xl">chat</span>
-          </button>
         ) : (
-          <div className="relative w-80 sm:w-96 h-[500px] max-h-[80vh] flex flex-col shadow-2xl rounded-2xl overflow-hidden transition-all transform origin-bottom-right">
-            <div className="bg-primary text-on-primary p-4 flex justify-between items-center rounded-t-2xl z-10">
-              <h3 className="font-headline font-bold flex items-center gap-2">
-                <span className="material-symbols-outlined">forum</span>
-                Sentinel Assistant
-              </h3>
-              <button 
-                onClick={() => setIsChatOpen(false)}
-                className="hover:text-primary-container transition-colors"
-              >
-                <span className="material-symbols-outlined">close</span>
-              </button>
+          /* Default Dashboard Layout */
+          <>
+            {/* Left Side: Top Locations */}
+            <div className="w-full lg:w-1/4 h-full overflow-hidden">
+              <TopLocationsPanel
+                areas={areas}
+                explanation={explanation}
+                loadingExplanation={loadingExplanation}
+                onViewDetails={handleViewDetails}
+                heatmapFactors={heatmapFactors}
+                heatmapFactor={heatmapFactor}
+                onHeatmapFactorChange={setHeatmapFactor}
+                heatmapOpen={heatmapOpen}
+                onToggleHeatmapOpen={() => setHeatmapOpen((current) => !current)}
+                heatmapEnabled={heatmapEnabled}
+                onToggleHeatmapEnabled={() => setHeatmapEnabled((current) => !current)}
+              />
             </div>
-            {/* Reusing ChatBox component */}
-            <ChatBox
-              messages={messages}
-              input={input}
-              setInput={setInput}
-              onSubmit={handleChatSubmit}
-              loading={chatLoading}
-              className="flex-grow rounded-none rounded-b-2xl border-x border-b border-t-0 shadow-none h-full"
-            />
-          </div>
+
+            {/* Center: Map Container */}
+            <div className="w-full lg:w-2/4 h-full relative">
+              {loadingMap && (
+                <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-surface-container-low/80 backdrop-blur-sm rounded-2xl border border-outline-variant/50">
+                  <span className="material-symbols-outlined animate-spin text-4xl text-primary mb-4">refresh</span>
+                  <h3 className="font-headline text-2xl font-bold text-on-surface">Generating map...</h3>
+                  <p className="font-body text-on-surface-variant mt-2">Plotting geospatial data for: "{initialQuery}"</p>
+                </div>
+              )}
+              <MapView
+                areas={areas}
+                heatPoints={heatPoints}
+                heatFactorKey={heatmapMeta.key}
+                heatFactorLabel={heatmapLabel}
+                heatFactorColor={heatmapMeta.color}
+                heatmapEnabled={heatmapEnabled}
+              />
+            </div>
+
+            {/* Right Side: Chat + Insights */}
+            <div className="w-full lg:w-1/4 h-full overflow-hidden">
+              <RightPanel
+                messages={messages}
+                input={input}
+                setInput={setInput}
+                onSubmit={handleChatSubmit}
+                chatLoading={chatLoading}
+              />
+            </div>
+          </>
         )}
-      </div>
+      </main>
     </div>
   );
 };

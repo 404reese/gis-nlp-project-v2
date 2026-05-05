@@ -73,3 +73,8 @@ def rank_locations(filters: dict) -> list:
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Geospatial Query System API for Mumbai."}
+
+
+@app.get("/locations")
+async def get_locations():
+    return LOCATIONS

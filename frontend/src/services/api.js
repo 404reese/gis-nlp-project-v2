@@ -26,12 +26,83 @@ export const generateMapData = async (query) => {
   }
 };
 
+export const getLocations = async () => {
+  try {
+    const response = await api.get('/locations');
+    return response.data;
+  } catch (error) {
+    console.error('Error in getLocations:', error);
+    throw error;
+  }
+};
+
 export const explainResults = async (data) => {
   try {
     const response = await api.post('/explain', data);
     return response.data;
   } catch (error) {
     console.error('Error in explainResults:', error);
+    throw error;
+  }
+};
+
+export const queryChat = async ({ message, chatId }) => {
+  try {
+    const response = await api.post('/query', {
+      message,
+      chat_id: chatId || null,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error in queryChat:', error);
+    throw error;
+  }
+};
+
+export const listChats = async () => {
+  try {
+    const response = await api.get('/chats');
+    return response.data;
+  } catch (error) {
+    console.error('Error in listChats:', error);
+    throw error;
+  }
+};
+
+export const getChat = async (chatId) => {
+  try {
+    const response = await api.get(`/chats/${chatId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error in getChat:', error);
+    throw error;
+  }
+};
+
+export const getLocationInsight = async ({ location, query, conversation }) => {
+  try {
+    const response = await api.post('/location-insight', {
+      location,
+      query,
+      conversation: conversation || [],
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error in getLocationInsight:', error);
+    throw error;
+  }
+};
+
+export const getPropertiesByLocation = async (region, bhk = null) => {
+  try {
+    const response = await api.post('/properties', {
+      region,
+      bhk: bhk,
+      price_max: null,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error in getPropertiesByLocation:', error);
     throw error;
   }
 };
