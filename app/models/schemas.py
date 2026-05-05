@@ -19,6 +19,14 @@ class Area(BaseModel):
     lon: float
     score: float
     reason: str
+    area_type: Optional[str] = None
+    footfall: Optional[int] = None
+    youth: Optional[int] = None
+    rent: Optional[int] = None
+    access: Optional[int] = None
+    competition: Optional[int] = None
+    flood: Optional[int] = None
+    traffic: Optional[int] = None
 
 class GenerateResponse(BaseModel):
     use_case: str
@@ -31,3 +39,12 @@ class ExplainRequest(BaseModel):
 
 class ExplainResponse(BaseModel):
     explanation: str
+
+class LocationInsightRequest(BaseModel):
+    location: dict
+    query: str
+    conversation: Optional[List[dict]] = []
+
+class LocationInsightResponse(BaseModel):
+    insight: str
+

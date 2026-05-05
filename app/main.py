@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import analyze, generate, explain, query
+from app.routes import analyze, generate, explain, query, location_insight, properties
 
 LOCATIONS = []
 
@@ -41,6 +41,8 @@ app.include_router(analyze.router, tags=["Analyze"])
 app.include_router(generate.router, tags=["Generate"])
 app.include_router(explain.router, tags=["Explain"])
 app.include_router(query.router, tags=["Query"])
+app.include_router(location_insight.router, tags=["Location Insight"])
+app.include_router(properties.router, tags=["Properties"])
 
 def rank_locations(filters: dict) -> list:
     """

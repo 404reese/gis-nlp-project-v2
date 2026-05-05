@@ -34,6 +34,27 @@ Format:
     try:
         raw_response = call_groq(prompt)
         parsed_data = parse_json_safely(raw_response)
+        from app.main import LOCATIONS
+
+        location_lookup = {
+            str(loc.get("name", "")).strip().lower(): loc
+            for loc in LOCATIONS
+        }
+
+        for area in parsed_data.get("areas", []):
+            name_key = str(area.get("name", "")).strip().lower()
+            loc = location_lookup.get(name_key)
+            if not loc:
+                continue
+            area["area_type"] = loc.get("area_type")
+            area["footfall"] = loc.get("footfall")
+            area["youth"] = loc.get("youth")
+            area["rent"] = loc.get("rent")
+            area["access"] = loc.get("access")
+            area["competition"] = loc.get("competition")
+            area["flood"] = loc.get("flood")
+            area["traffic"] = loc.get("traffic")
+
         return GenerateResponse(**parsed_data)
     except ValueError as e:
         raise HTTPException(status_code=500, detail=str(e))
