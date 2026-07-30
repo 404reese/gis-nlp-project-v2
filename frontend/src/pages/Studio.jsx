@@ -1,6 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import MapCanvas from '../components/MapCanvas';
+import VectorLayers from '../components/VectorLayers';
+import LayerPanel from '../components/LayerPanel';
 import { useMapStore } from '../store/mapStore';
 import { HAS_MAPTILER } from '../config/mapConfig';
 
@@ -12,12 +14,12 @@ import { HAS_MAPTILER } from '../config/mapConfig';
  */
 const Studio = () => {
   const ready = useMapStore((s) => s.ready);
-  const layers = useMapStore((s) => s.layers);
 
   return (
     <div className="relative h-screen w-screen overflow-hidden bg-surface">
       {/* Map fills the whole viewport */}
       <MapCanvas />
+      <VectorLayers />
 
       {/* Left: layer panel */}
       <aside className="absolute top-4 left-4 bottom-4 z-10 w-72 flex flex-col rounded-2xl border border-outline-variant/50 bg-surface/95 shadow-soft backdrop-blur">
@@ -32,19 +34,7 @@ const Studio = () => {
         </div>
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          <div className="text-xs uppercase tracking-wide text-on-surface-variant mb-2">Layers</div>
-          {layers.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-outline-variant/60 p-4 text-sm font-body text-on-surface-variant">
-              No data layers yet. Real layers (admin boundaries, roads, POIs,
-              real-estate) load in the next phase.
-            </div>
-          ) : (
-            <ul className="space-y-2">
-              {layers.map((l) => (
-                <li key={l.id} className="text-sm font-body text-on-surface">{l.label}</li>
-              ))}
-            </ul>
-          )}
+          <LayerPanel />
         </div>
 
         <footer className="px-4 py-3 border-t border-outline-variant/40 text-xs font-body text-on-surface-variant">

@@ -39,7 +39,9 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-geo}:${POSTGRES_PASSWORD:-geo}@db:5432/${POSTGRES_DB:-geo}
-    command: ["--listen-addresses", "0.0.0.0:3000"]
+    command: ["--config", "/config.yaml", "--listen-addresses", "0.0.0.0:3000"]
+    volumes:
+      - ./martin/config.yaml:/config.yaml:ro
     ports:
       - "${MARTIN_PORT:-3001}:3000"
     restart: unless-stopped

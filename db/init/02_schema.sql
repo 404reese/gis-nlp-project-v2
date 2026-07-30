@@ -118,6 +118,18 @@ CREATE TABLE IF NOT EXISTS crime.incident_agg (
     geom      geometry(MultiPolygon, 4326)
 );
 
+-- Per-area safety/crime scores (point-based; from the curated crime dataset).
+CREATE TABLE IF NOT EXISTS crime.area (
+    id           BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    city_id      BIGINT NOT NULL REFERENCES core.city(id) ON DELETE CASCADE,
+    name         TEXT,
+    zone         TEXT,
+    safety_score INT,
+    risk_level   TEXT,
+    breakdown    JSONB,
+    geom         geometry(Point, 4326)
+);
+
 CREATE TABLE IF NOT EXISTS env.measurement (
     id       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     city_id  BIGINT NOT NULL REFERENCES core.city(id) ON DELETE CASCADE,
@@ -163,5 +175,7 @@ CREATE INDEX IF NOT EXISTS idx_demo_geom        ON demo.cell            USING GI
 CREATE INDEX IF NOT EXISTS idx_demo_city        ON demo.cell            (city_id);
 CREATE INDEX IF NOT EXISTS idx_crime_geom       ON crime.incident_agg   USING GIST (geom);
 CREATE INDEX IF NOT EXISTS idx_crime_city       ON crime.incident_agg   (city_id);
+CREATE INDEX IF NOT EXISTS idx_crimearea_geom   ON crime.area           USING GIST (geom);
+CREATE INDEX IF NOT EXISTS idx_crimearea_city   ON crime.area           (city_id);
 CREATE INDEX IF NOT EXISTS idx_env_geom         ON env.measurement      USING GIST (geom);
 CREATE INDEX IF NOT EXISTS idx_env_city         ON env.measurement      (city_id);

@@ -1,0 +1,17 @@
+# Martin vector-tile config.
+# Publish sources as `schema.table` (stable, collision-free) rather than bare table
+# names, and only from the data schemas (skip staging/meta/core noise).
+postgres:
+  connection_string: ${DATABASE_URL}
+  auto_publish:
+    tables:
+      source_id_format: '{schema}.{table}'
+      from_schemas:
+        - admin
+        - roads
+        - transport
+        - poi
+        - realestate
+        - demo
+        - crime
+        - env

@@ -10,14 +10,24 @@
 cp .env.example .env            # adjust if desired
 docker compose up -d --build    # first run builds the postgis+pgvector image
 ```
-- Postgres/PostGIS → `localhost:5432` (user/pass/db all `geo`)
-- Martin vector tiles → `localhost:3001`  (health: http://localhost:3001/health)
+- Postgres/PostGIS → `localhost:5433` (host port 5433 avoids a native Postgres on 5432; user/pass/db all `geo`)
+- Martin vector tiles → `localhost:3001`  (catalog: http://localhost:3001/catalog)
 
 The DB init scripts in `db/init/` run **once**, on first startup with an empty data
 volume. To re-apply them after editing, reset the volume:
 ```bash
 docker compose down -v && docker compose up -d --build
 ```
+
+## 1.5 Load real data (ETL — any city)
+```bash
+pip install -r etl/requirements.txt         # osmnx, geopandas, ... (heavier)
+python -m etl.run --city "Mumbai, India"    # OSM + real-estate + crime -> PostGIS
+docker restart geoquery-martin              # pick up any newly created tables
+```
+Ingests admin boundaries, roads, transit, POIs (OSM), geocodes the house-price CSV into
+a real-estate layer, and loads the crime dataset. Re-runnable (idempotent per city).
+Any city works: `python -m etl.run --city "Pune, India"`.
 
 ## 2. Backend (FastAPI)
 ```bash

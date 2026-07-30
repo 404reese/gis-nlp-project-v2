@@ -4,7 +4,8 @@
 > **natural-language → spatial-query engine**, backed by **PostGIS + real open data**,
 > generalizable to **any city**.
 
-Status: **APPROVED. M0 (Foundations) scaffolded** — see §8 roadmap and docs/RUNBOOK.md.
+Status: **APPROVED. M0 + M1 done** (foundations + real Mumbai data layers). Next: M2 (NL→SQL engine).
+See §8 roadmap and docs/RUNBOOK.md.
 Last updated: 2026-07-30.
 
 ---

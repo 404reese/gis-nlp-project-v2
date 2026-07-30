@@ -13,6 +13,10 @@ cd frontend && npm install && npm run dev                              # fronten
 Then open http://localhost:3000/studio · health check http://localhost:8000/health
 
 ## Status
-- **M0 — Foundations: scaffolded.** PostGIS+pgvector via Docker, Martin tiles, DB schema,
+- **M0 — Foundations: done.** PostGIS+pgvector via Docker, Martin tiles, DB schema,
   FastAPI `/health`, MapLibre studio shell.
-- Next: **M1** — real Mumbai data layers (admin, roads, POIs, real-estate) via ETL.
+- **M1 — Real Mumbai layers: done.** ETL (`etl/`) loads live OSM data + real-estate + crime
+  into PostGIS; Studio shows toggleable, styled vector-tile layers with legends.
+  Current Mumbai load: 48 admin boundaries, 16.8k roads, 2.2k transit stops, 10.8k POIs,
+  55.6k real-estate points, 40 crime areas.
+- Next: **M2** — the NL → PostGIS query engine (ask a spatial question, get a real answer layer).
