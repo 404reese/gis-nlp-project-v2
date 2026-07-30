@@ -4,7 +4,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import analyze, generate, explain, query, location_insight, properties
+from app.routes import analyze, generate, explain, query, location_insight, properties, health
+from app.db_spatial import dispose_engines
 
 LOCATIONS = []
 
@@ -25,6 +26,7 @@ async def lifespan(app: FastAPI):
         print(f"Dataset not found at {file_path}")
     yield
     LOCATIONS.clear()
+    await dispose_engines()
 
 app = FastAPI(
     title="Geospatial Query System API",
@@ -43,6 +45,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(health.router, tags=["Health"])
 app.include_router(analyze.router, tags=["Analyze"])
 app.include_router(generate.router, tags=["Generate"])
 app.include_router(explain.router, tags=["Explain"])

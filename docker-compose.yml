@@ -1,0 +1,48 @@
+# GeoQuery Sentinel — local infrastructure (M0)
+# Usage:
+#   1. Start Docker Desktop
+#   2. copy .env.example -> .env  (adjust if needed)
+#   3. docker compose up -d
+#   4. Postgres/PostGIS on localhost:5432, Martin tiles on localhost:3001
+services:
+  db:
+    build:
+      context: ./docker/postgis
+    image: geoquery-postgis:16-3.4
+    container_name: geoquery-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-geo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-geo}
+      POSTGRES_DB: ${POSTGRES_DB:-geo}
+    ports:
+      # Host port 5433 avoids clashing with a native PostgreSQL on 5432.
+      # (Martin reaches the DB over the internal network on 5432, unaffected.)
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Init scripts run in alphabetical order on FIRST init (empty volume) only.
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-geo} -d ${POSTGRES_DB:-geo}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  # Martin serves Mapbox Vector Tiles (MVT) straight from PostGIS.
+  # With CONNECTION only, Martin auto-discovers tables that have a geometry column.
+  martin:
+    image: ghcr.io/maplibre/martin:v0.14.2
+    container_name: geoquery-martin
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-geo}:${POSTGRES_PASSWORD:-geo}@db:5432/${POSTGRES_DB:-geo}
+    command: ["--listen-addresses", "0.0.0.0:3000"]
+    ports:
+      - "${MARTIN_PORT:-3001}:3000"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

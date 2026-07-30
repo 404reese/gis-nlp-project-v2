@@ -19,4 +19,15 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
 
+    # Spatial database (PostGIS). Owner role for full-access reads/writes;
+    # readonly role is what the LLM-generated SQL runs as (see docs/ARCHITECTURE.md §5.5).
+    DATABASE_URL: str = "postgresql+asyncpg://geo:geo@localhost:5433/geo"
+    DATABASE_URL_READONLY: str = "postgresql+asyncpg://geo_readonly:geo_readonly@localhost:5433/geo"
+
+    # Vector tile server (Martin)
+    MARTIN_URL: str = "http://localhost:3001"
+
+    class Config:
+        extra = "ignore"
+
 settings = Settings()
