@@ -15,6 +15,11 @@ export const useMapStore = create((set) => ({
   setMap: (map) => set({ map }),
   setReady: (ready) => set({ ready }),
 
+  // Site-evaluation "pick a point on the map" mode.
+  pickMode: false,
+  setPickMode: (pickMode) => set({ pickMode }),
+  togglePickMode: () => set((s) => ({ pickMode: !s.pickMode })),
+
   // Which layer source ids actually exist in Martin's catalog (i.e. have data/tables).
   available: {},
   setAvailable: (available) => set({ available }),

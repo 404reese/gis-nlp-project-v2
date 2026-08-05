@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import MapCanvas from '../components/MapCanvas';
 import VectorLayers from '../components/VectorLayers';
 import LayerPanel from '../components/LayerPanel';
+import NLQueryBar from '../components/NLQueryBar';
+import SiteEvalPanel from '../components/SiteEvalPanel';
 import { useMapStore } from '../store/mapStore';
 import { HAS_MAPTILER } from '../config/mapConfig';
 
@@ -16,7 +18,7 @@ const Studio = () => {
   const ready = useMapStore((s) => s.ready);
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-surface">
+    <div className="fixed inset-0 overflow-hidden bg-surface">
       {/* Map fills the whole viewport */}
       <MapCanvas />
       <VectorLayers />
@@ -38,22 +40,18 @@ const Studio = () => {
         </div>
 
         <footer className="px-4 py-3 border-t border-outline-variant/40 text-xs font-body text-on-surface-variant">
-          Basemap: {HAS_MAPTILER ? 'MapTiler' : 'MapLibre demo (no key)'} ·{' '}
+          Basemap: {HAS_MAPTILER ? 'MapTiler' : 'OpenStreetMap (no key)'} ·{' '}
           {ready ? 'ready' : 'loading…'}
         </footer>
       </aside>
 
-      {/* Top-center: NL query bar (wired to the engine in M2) */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 w-[min(560px,60vw)]">
-        <div className="flex items-center gap-2 rounded-full border border-outline-variant/50 bg-surface/95 shadow-soft backdrop-blur px-4 py-2.5">
-          <span className="text-on-surface-variant">⌕</span>
-          <input
-            disabled
-            placeholder="Ask a spatial question… (enabled in the query-engine phase)"
-            className="flex-1 bg-transparent outline-none text-sm font-body text-on-surface placeholder:text-on-surface-variant/70"
-          />
-        </div>
+      {/* Top-center: NL query bar -> PostGIS answer layer */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10">
+        <NLQueryBar />
       </div>
+
+      {/* Right: click-a-point site evaluation + cost-to-open */}
+      <SiteEvalPanel />
     </div>
   );
 };

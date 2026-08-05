@@ -10,6 +10,9 @@ const TopNavBar = () => {
             Sentinel
           </Link>
           <div className="hidden md:flex items-center gap-8 text-[#3a302a] dark:text-stone-100">
+            <Link to="/studio" className="font-body font-semibold text-[#c2652a] dark:text-orange-400 hover:opacity-80 transition-colors duration-200">
+              Studio ✦
+            </Link>
             <Link to="/query" className="font-body hover:text-[#c2652a] dark:hover:text-orange-400 transition-colors duration-200">
               Query
             </Link>

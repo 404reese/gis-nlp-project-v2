@@ -19,4 +19,10 @@ Then open http://localhost:3000/studio · health check http://localhost:8000/hea
   into PostGIS; Studio shows toggleable, styled vector-tile layers with legends.
   Current Mumbai load: 48 admin boundaries, 16.8k roads, 2.2k transit stops, 10.8k POIs,
   55.6k real-estate points, 40 crime areas.
-- Next: **M2** — the NL → PostGIS query engine (ask a spatial question, get a real answer layer).
+- **M2 — NL → PostGIS engine: done.** Ask a plain-English spatial question in Studio →
+  a multi-agent pipeline (intent → schema-grounded SQL → sandboxed execution → self-repair →
+  explanation) returns a real GeoJSON answer layer, the explanation, and the SQL it ran.
+  Endpoint: `POST /nlquery`. Runs as the read-only `geo_readonly` role.
+  Try: *"hospitals within 1 km of a metro station"*, *"cafes in Bandra"*, *"cheapest 2 BHK flats"*,
+  *"safest areas to live"*.
+- Next: **M3** — Felt-grade UI polish (draw/measure, saved & shareable maps).

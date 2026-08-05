@@ -93,6 +93,33 @@ export const getLocationInsight = async ({ location, query, conversation }) => {
   }
 };
 
+export const nlQuery = async ({ question, cityId = 1 }) => {
+  const response = await api.post('/nlquery', { question, city_id: cityId });
+  return response.data;
+};
+
+export const businessEstimate = async ({ businessType, lat, lng, cityId = 1, sizeSqft = null, tier = 'standard' }) => {
+  const response = await api.post('/business-estimate', {
+    business_type: businessType,
+    lat,
+    lng,
+    city_id: cityId,
+    size_sqft: sizeSqft,
+    tier,
+  });
+  return response.data;
+};
+
+export const siteEval = async ({ lat, lng, cityId = 1, radiusM = 1500 }) => {
+  const response = await api.post('/site-eval', {
+    lat,
+    lng,
+    city_id: cityId,
+    radius_m: radiusM,
+  });
+  return response.data;
+};
+
 export const getPropertiesByLocation = async (region, bhk = null) => {
   try {
     const response = await api.post('/properties', {

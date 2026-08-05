@@ -25,20 +25,29 @@ const MapCanvas = () => {
       attributionControl: { compact: true },
     });
 
-    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
-    map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: 'metric' }), 'bottom-right');
+    map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'bottom-right');
+    map.addControl(new maplibregl.ScaleControl({ maxWidth: 120, unit: 'metric' }), 'bottom-left');
 
-    map.on('load', () => setReady(true));
+    map.on('load', () => {
+      setReady(true);
+      map.resize(); // container may have been 0-height at init; force a correct size
+    });
+    map.on('error', (e) => console.error('[maplibre]', e?.error?.message || e));
     setMap(map);
 
+    // Recover from any container size change (the classic blank-canvas-in-flex bug).
+    const ro = new ResizeObserver(() => map.resize());
+    ro.observe(containerRef.current);
+
     return () => {
+      ro.disconnect();
       setReady(false);
       setMap(null);
       map.remove();
     };
   }, [setMap, setReady]);
 
-  return <div ref={containerRef} className="absolute inset-0" />;
+  return <div ref={containerRef} className="absolute inset-0 h-full w-full" />;
 };
 
 export default MapCanvas;
