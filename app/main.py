@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import analyze, generate, explain, query, location_insight, properties, health
+from app.routes import analyze, generate, explain, query, location_insight, properties, health, nlquery, business, site
 from app.db_spatial import dispose_engines
 
 LOCATIONS = []
@@ -46,6 +46,9 @@ app.add_middleware(
 
 # Include routers
 app.include_router(health.router, tags=["Health"])
+app.include_router(nlquery.router, tags=["NL Query"])
+app.include_router(business.router, tags=["Business"])
+app.include_router(site.router, tags=["Site Evaluation"])
 app.include_router(analyze.router, tags=["Analyze"])
 app.include_router(generate.router, tags=["Generate"])
 app.include_router(explain.router, tags=["Explain"])
