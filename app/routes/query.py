@@ -57,27 +57,30 @@ def handle_query(request: QueryRequest):
     llm_response = call_llm(chat["messages"])
     text = llm_response.get("text", "")
     filters = llm_response.get("filters")
-    
+
     # 4. If filters exist -> run rank_locations
     locations = []
     if filters:
         locations = rank_locations(filters)
-        
-    # 5. Save assistant response in MongoDB
-    assistant_msg = {
-        "role": "assistant",
-        "text": text,
-        "filters": filters,
-        "results": locations,
-        "timestamp": datetime.now(timezone.utc)
-    }
-    chat["messages"].append(assistant_msg)
-    
-    # Update document in MongoDB
-    chat_collection.update_one(
-        {"chat_id": chat_id},
-        {"$set": {"messages": chat["messages"], "updated_at": datetime.now(timezone.utc)}}
-    )
+
+    # 5. Save assistant response in MongoDB.
+    # Skip persisting on LLM failure so the fallback message doesn't get fed
+    # back into the model as prior context on the next turn (that feedback
+    # loop is what caused Groq's structured-output parser to 400 repeatedly).
+    if not llm_response.get("error"):
+        assistant_msg = {
+            "role": "assistant",
+            "text": text,
+            "filters": filters,
+            "results": locations,
+            "timestamp": datetime.now(timezone.utc)
+        }
+        chat["messages"].append(assistant_msg)
+
+        chat_collection.update_one(
+            {"chat_id": chat_id},
+            {"$set": {"messages": chat["messages"], "updated_at": datetime.now(timezone.utc)}}
+        )
     
     # 6. Return
     return QueryResponse(

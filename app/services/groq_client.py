@@ -13,7 +13,7 @@ def call_groq(prompt: str) -> str:
         "Content-Type": "application/json"
     }
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "openai/gpt-oss-120b",
         "messages": [
             {"role": "user", "content": prompt}
         ]
@@ -104,19 +104,28 @@ def call_llm(messages: list) -> dict:
         )
     }
 
-    payload = {
-        "model": "llama-3.3-70b-versatile",
+    base_payload = {
+        "model": "openai/gpt-oss-120b",
         "messages": [system_prompt] + recent_messages,
-        "response_format": {"type": "json_object"}
     }
 
     try:
-        response = requests.post(url, headers=headers, json=payload)
+        response = requests.post(
+            url, headers=headers,
+            json={**base_payload, "response_format": {"type": "json_object"}}
+        )
+        if response.status_code == 400:
+            # Groq's structured-output parser occasionally fails to produce
+            # valid JSON (output_parse_failed) and 400s before returning any
+            # content. Retry once without the strict json_object constraint
+            # and lean on parse_json_safely's regex fallback instead.
+            response = requests.post(url, headers=headers, json=base_payload)
         response.raise_for_status()
         content = response.json()["choices"][0]["message"]["content"]
         return parse_json_safely(content)
-    except Exception as e:
+    except Exception:
         return {
-            "text": f"Error communicating with LLM: {str(e)}",
-            "filters": {}
+            "text": "Sorry, I had trouble processing that. Could you rephrase your request?",
+            "filters": {},
+            "error": True
         }
