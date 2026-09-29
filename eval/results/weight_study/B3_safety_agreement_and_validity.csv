@@ -1,0 +1,6 @@
+scheme,top5_overlap,top5_jaccard,kendall_tau,kendall_p,spearman_rho,spearman_vs_total_cases,p_cases,spearman_vs_dataset_safety_score,p_ref,n_clamped_to_0
+Baseline (hand-picked),5,1.0,1.0,2.5e-48,1.0,-0.895,7.3e-15,0.902,1.8e-15,0
+Equal,5,1.0,0.951,5.4e-18,0.992,-0.924,2e-17,0.917,9.3e-17,0
+ROC,5,1.0,0.997,9.8e-47,1.0,-0.897,4.6e-15,0.904,1.3e-15,0
+Entropy,5,1.0,0.931,2.7e-17,0.989,-0.935,1.2e-18,0.926,1.3e-17,0
+CRITIC,5,1.0,0.923,4.9e-17,0.985,-0.939,2.9e-19,0.93,3.8e-18,0

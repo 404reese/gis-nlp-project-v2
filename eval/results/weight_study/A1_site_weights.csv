@@ -1,0 +1,10 @@
+,footfall,youth,access,rent,competition
+Baseline (hand-picked),0.3,0.25,0.2,0.15,0.1
+Equal,0.2,0.2,0.2,0.2,0.2
+ROC,0.457,0.257,0.157,0.09,0.04
+AHP,0.378,0.217,0.201,0.123,0.081
+Entropy,0.194,0.113,0.405,0.14,0.149
+CRITIC,0.184,0.145,0.208,0.227,0.236
+Scenario: Budget,0.15,0.15,0.2,0.35,0.15
+Scenario: Student,0.2,0.4,0.2,0.15,0.05
+Scenario: Premium,0.4,0.15,0.25,0.0,0.2

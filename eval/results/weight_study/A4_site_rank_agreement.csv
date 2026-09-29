@@ -1,0 +1,11 @@
+scheme,top5_overlap,top5_jaccard,kendall_tau,kendall_p,spearman_rho
+Baseline (hand-picked),5,1.0,1.0,6.5e-19,1.0
+Equal,2,0.25,0.413,0.00055,0.54
+ROC,5,1.0,0.813,3.8e-13,0.916
+AHP,5,1.0,0.923,1.7e-16,0.98
+Entropy,2,0.25,0.578,2.4e-07,0.747
+CRITIC,0,0.0,-0.008,0.94,0.03
+Scenario: Budget,1,0.111,-0.113,0.32,-0.148
+Scenario: Student,2,0.25,0.873,1.1e-14,0.966
+Scenario: Premium,5,1.0,0.832,1.6e-13,0.949
+TOPSIS (baseline w),1,0.111,0.361,0.0013,0.494

@@ -1,0 +1,6 @@
+,Baseline (hand-picked),Equal,ROC,AHP,Entropy,CRITIC,Scenario: Budget,Scenario: Student,Scenario: Premium,TOPSIS (baseline w)
+#1,Andheri West (7.15),Andheri West (6.00),Bandra West (8.06),Andheri West (7.49),Dadar West (7.01),Borivali East (5.95),Borivali East (5.90),Bandra West (7.60),Lower Parel (7.45),Malad West (0.59)
+#2,Bandra West (7.05),Bandra East (6.00),Andheri West (8.05),Bandra West (7.38),Dadar East (7.00),Sion (5.88),Sion (5.75),Andheri West (7.55),Andheri West (7.40),Goregaon West (0.59)
+#3,Dadar West (6.85),Andheri East (6.00),Lower Parel (8.03),Lower Parel (7.32),Kurla (6.92),Malad East (5.87),Kurla (5.75),Powai (7.05),Dadar West (7.35),Kurla (0.58)
+#4,Lower Parel (6.80),Ghatkopar (6.00),Dadar West (7.69),Dadar West (7.26),Andheri East (6.85),Borivali West (5.82),Malad East (5.70),Malad West (7.00),Bandra West (7.30),Borivali West (0.58)
+#5,Kurla (6.80),Kurla (6.00),Kurla (7.50),Kurla (7.17),Ghatkopar (6.85),Jogeshwari West (5.82),Borivali West (5.70),Goregaon West (7.00),Kurla (7.15),Jogeshwari West (0.58)
