@@ -5,6 +5,7 @@ import VectorLayers from '../components/VectorLayers';
 import LayerPanel from '../components/LayerPanel';
 import NLQueryBar from '../components/NLQueryBar';
 import SiteEvalPanel from '../components/SiteEvalPanel';
+import ComparePanel from '../components/ComparePanel';
 import { useMapStore } from '../store/mapStore';
 import { HAS_MAPTILER } from '../config/mapConfig';
 
@@ -52,6 +53,9 @@ const Studio = () => {
 
       {/* Right: click-a-point site evaluation + cost-to-open */}
       <SiteEvalPanel />
+
+      {/* Bottom-center: pinned locations tray + side-by-side comparison */}
+      <ComparePanel />
     </div>
   );
 };

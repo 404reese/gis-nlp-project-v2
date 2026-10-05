@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { LEAFLET_TILE_URL, LEAFLET_ATTRIBUTION } from '../config/mapConfig';
 import { CircleMarker, MapContainer, Popup, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -458,8 +459,8 @@ const SafetyMap = () => {
         <MapContainer center={mumbaiCenter} zoom={11} scrollWheelZoom className="w-full h-full">
           <MapSizeWatcher />
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+            attribution={LEAFLET_ATTRIBUTION}
+            url={LEAFLET_TILE_URL}
           />
 
           <MapFocus selectedPoint={selectedPoint} markerRefMap={markerRefMap} />

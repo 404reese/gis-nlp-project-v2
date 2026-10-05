@@ -27,6 +27,7 @@ class Area(BaseModel):
     competition: Optional[int] = None
     flood: Optional[int] = None
     traffic: Optional[int] = None
+    metrics_source: Optional[str] = None
 
 class GenerateResponse(BaseModel):
     use_case: str

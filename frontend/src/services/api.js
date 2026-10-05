@@ -110,6 +110,17 @@ export const businessEstimate = async ({ businessType, lat, lng, cityId = 1, siz
   return response.data;
 };
 
+export const competitorAnalysis = async ({ lat, lng, businessType, cityId = 1, radiusM = 1500 }) => {
+  const response = await api.post('/competitor-analysis', {
+    lat,
+    lng,
+    business_type: businessType,
+    city_id: cityId,
+    radius_m: radiusM,
+  });
+  return response.data;
+};
+
 export const siteEval = async ({ lat, lng, cityId = 1, radiusM = 1500 }) => {
   const response = await api.post('/site-eval', {
     lat,

@@ -35,3 +35,9 @@ export const API_BASE = import.meta.env.VITE_API_BASE?.trim() || 'http://localho
 // Mumbai — the pre-baked default city.
 export const DEFAULT_CENTER = [72.8777, 19.076]; // [lng, lat] for MapLibre
 export const DEFAULT_ZOOM = 11;
+
+// Shared raster tiles for the Leaflet maps. CARTO's free basemaps now require an API key
+// (they stamp "API KEY REQUIRED" over every tile), so use plain OSM tiles instead.
+export const LEAFLET_TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+export const LEAFLET_ATTRIBUTION =
+  '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';

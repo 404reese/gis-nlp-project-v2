@@ -60,6 +60,107 @@ async def _local_psf(lat: float, lng: float, city_id: int, radius_m: int = 2500)
     return psf[len(psf) // 2], len(psf)
 
 
+# --- Revenue model -------------------------------------------------------------------
+# Benchmarks per business type: (poi categories that count as competitors, average ticket ₹,
+# base customers/day per 100 sqft at a "typical" location, cost of goods as share of revenue).
+# These are modeled assumptions (not measured) and are surfaced as such in the response.
+REV_BENCH = {
+    "cafe":          (["cafe"], 300, 18, 0.30),
+    "coffee shop":   (["cafe"], 300, 18, 0.30),
+    "restaurant":    (["restaurant", "fast_food"], 650, 9, 0.33),
+    "cloud kitchen": (["restaurant", "fast_food"], 450, 25, 0.35),
+    "bakery":        (["cafe", "bakery"], 250, 20, 0.40),
+    "bar":           (["bar", "pub"], 1100, 6, 0.30),
+    "pharmacy":      (["pharmacy"], 450, 30, 0.72),
+    "clinic":        (["clinic", "doctors", "hospital"], 700, 5, 0.10),
+    "grocery store": (["supermarket", "convenience", "marketplace"], 400, 22, 0.78),
+    "supermarket":   (["supermarket", "mall"], 900, 8, 0.80),
+    "retail store":  (["shop", "mall"], 1500, 4, 0.55),
+    "clothing store": (["shop", "mall"], 2000, 3, 0.55),
+    "boutique":      (["shop"], 3000, 2, 0.50),
+    "salon":         (["salon", "beauty"], 800, 6, 0.20),
+    "spa":           (["spa", "salon"], 2500, 2, 0.20),
+    "gym":           (["gym", "fitness_centre"], 1800, 1.5, 0.05),
+    "bookstore":     (["books", "bookstore"], 500, 6, 0.65),
+}
+GENERIC_BENCH = ([], 500, 8, 0.45)
+TIER_TICKET = {"economy": 0.8, "standard": 1.0, "premium": 1.3}
+SCENARIOS = [("Conservative", 0.7), ("Base", 1.0), ("Optimistic", 1.3)]
+
+
+async def _catchment(lat: float, lng: float, city_id: int, categories: list[str]) -> dict:
+    """Footfall proxies (amenity density, transit) + same-category competitor count."""
+    from app.services.site_evaluator import _amenities, _transit
+
+    engine = get_engine()
+    async with engine.connect() as conn:
+        amenities = await _amenities(conn, lat, lng, city_id, 1000)
+        transit = await _transit(conn, lat, lng, city_id, 800)
+        competitors = None
+        if categories:
+            competitors = (await conn.execute(text(
+                """
+                SELECT COUNT(*) FROM poi.place
+                WHERE city_id = :c AND lower(category) = ANY(:cats)
+                  AND ST_DWithin(geom::geography,
+                                 ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography, 1000)
+                """
+            ), {"c": city_id, "cats": categories, "lng": lng, "lat": lat})).scalar()
+    return {"amenities": amenities, "transit": transit, "competitors": competitors}
+
+
+def _revenue_model(business_type: str, size: int, tier: str, catch: dict,
+                   monthly_total: int, restock: int, one_time_total: int) -> dict:
+    cats, ticket, per100, cogs_pct = REV_BENCH.get(business_type.strip().lower(), GENERIC_BENCH)
+    ticket = ticket * TIER_TICKET.get(tier, 1.0)
+
+    amen_total = sum(catch["amenities"].values())
+    near_transit = any(t["distance_m"] <= 800 and t["mode"] in ("metro", "rail") for t in catch["transit"])
+    # Footfall: 0.6x in a quiet pocket up to 1.5x in a dense, transit-served one.
+    footfall = 0.6 + 0.8 * min(1.0, amen_total / 120) + (0.1 if near_transit else 0.0)
+    comp = catch["competitors"]
+    comp_mult = 1.0 if comp is None else max(0.6, 1 / (1 + 0.04 * comp))
+
+    daily = size / 100 * per100 * footfall * comp_mult
+    fixed = monthly_total - restock  # restock is replaced by COGS % of revenue below
+
+    def scenario(name: str, mult: float) -> dict:
+        rev = daily * mult * ticket * 30
+        profit = rev - rev * cogs_pct - fixed
+        return {
+            "name": name,
+            "daily_customers": round(daily * mult),
+            "monthly_revenue": round(rev),
+            "monthly_profit": round(profit),
+            "payback_months": round(one_time_total / profit, 1) if profit > 0 else None,
+        }
+
+    base_margin = 1 - cogs_pct
+    return {
+        "avg_ticket": round(ticket),
+        "cogs_pct": cogs_pct,
+        "fixed_costs": fixed,
+        "breakeven_revenue": round(fixed / base_margin) if base_margin > 0 else None,
+        "breakeven_daily_customers": round(fixed / base_margin / (ticket * 30)) if base_margin > 0 else None,
+        "scenarios": [scenario(n, m) for n, m in SCENARIOS],
+        "drivers": {
+            "footfall_multiplier": round(footfall, 2),
+            "competition_multiplier": round(comp_mult, 2),
+            "competitors_1km": comp,
+            "amenities_1km": amen_total,
+            "near_metro_or_rail": near_transit,
+        },
+        "note": (
+            f"Modeled, not measured: {size} sqft × benchmark footfall for a {business_type} × location "
+            f"multiplier ({footfall:.2f}× from {amen_total} amenities within 1 km"
+            f"{', metro/rail within 800 m' if near_transit else ''}) × competition factor "
+            f"({comp_mult:.2f}× from {comp if comp is not None else 'n/a'} competitors within 1 km). "
+            f"Average ticket ₹{ticket:,.0f}; cost of goods {cogs_pct:.0%} of revenue replaces the fixed "
+            "restock line. Payback = one-time setup ÷ monthly profit."
+        ),
+    }
+
+
 async def _llm_line_items(business_type: str, city: str, size: int, tier: str, monthly_rent: int) -> dict:
     prompt = f"""You are a small-business setup cost estimator for {city} (India). Give a
 realistic cost breakdown in INR for opening a {business_type} of about {size} sqft, {tier} tier.
@@ -174,7 +275,16 @@ async def estimate_business(business_type: str, lat: float, lng: float, city_id:
     working_capital = monthly_total * WORKING_CAPITAL_MONTHS
     startup_total = one_time_total + working_capital
 
+    try:
+        cats = REV_BENCH.get(business_type.strip().lower(), GENERIC_BENCH)[0]
+        catch = await _catchment(lat, lng, city_id, cats)
+        restock = _i(opex.get("inventory_restock"))
+        revenue = _revenue_model(business_type, size, tier, catch, monthly_total, restock, one_time_total)
+    except Exception:  # noqa: BLE001  - revenue is additive; never fail the cost estimate
+        revenue = None
+
     return {
+        "revenue": revenue,
         "business_type": business_type,
         "location": {"lat": lat, "lng": lng},
         "size_sqft": size,

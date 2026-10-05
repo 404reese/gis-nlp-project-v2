@@ -137,19 +137,29 @@ const Dashboard = () => {
   };
 
   const heatPoints = useMemo(() => {
-    return locations
-      .map((locationItem) => {
-        const lat = Number(locationItem?.lat);
-        const lng = Number(locationItem?.lng);
-        const factorValue = Number(locationItem?.[heatmapFactor]);
+    const rows = locations
+      .map((locationItem) => ({
+        lat: Number(locationItem?.lat),
+        lng: Number(locationItem?.lng),
+        value: Number(locationItem?.[heatmapFactor]),
+      }))
+      .filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng) && Number.isFinite(r.value));
 
-        if (!Number.isFinite(lat) || !Number.isFinite(lng) || !Number.isFinite(factorValue)) {
-          return null;
-        }
+    if (!rows.length) return [];
 
-        return [lat, lng, Math.min(1, Math.max(0, factorValue / 10))];
-      })
-      .filter(Boolean);
+    // Raw 0-10 scores are all bunched at 5-10, so every factor used to light up the same
+    // places. Stretch each factor to its own min–max range, then keep only its stronger
+    // locations (top ~40%) so the highlighted AREA changes with the factor, and draw
+    // those at high intensity so they stay clearly visible.
+    const values = rows.map((r) => r.value);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const span = max - min || 1;
+    const scored = rows.map((r) => ({ ...r, t: (r.value - min) / span }));
+    const cutoff = [...scored.map((r) => r.t)].sort((a, b) => b - a)[Math.floor(scored.length * 0.4)] ?? 0;
+    return scored
+      .filter((r) => r.t > cutoff || r.t === 1)
+      .map((r) => [r.lat, r.lng, 0.55 + 0.45 * r.t]);
   }, [locations, heatmapFactor]);
 
   const heatmapLabel = useMemo(() => {

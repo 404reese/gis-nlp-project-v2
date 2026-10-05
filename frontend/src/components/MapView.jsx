@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { LEAFLET_TILE_URL, LEAFLET_ATTRIBUTION } from '../config/mapConfig';
 import { MapContainer, TileLayer, CircleMarker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet.heat';
@@ -79,9 +80,10 @@ const HeatLayer = ({ points, factorKey }) => {
       }
 
       heatLayer = L.heatLayer(validPoints, {
-        radius: 30,
-        blur: 20,
-        minOpacity: 0.5,
+        radius: 34,
+        blur: 24,
+        minOpacity: 0.55,
+        max: 1.0,
         maxZoom: 17,
         gradient: heatGradients[factorKey] || heatGradients.footfall,
       });
@@ -138,8 +140,8 @@ const MapView = ({ areas, heatPoints, heatFactorKey, heatFactorLabel, heatFactor
       >
         <MapSizeWatcher />
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          attribution={LEAFLET_ATTRIBUTION}
+          url={LEAFLET_TILE_URL}
         />
         {hasHeatPoints && <HeatLayer points={heatPoints} factorKey={heatFactorKey} />}
         {areas && areas.map((area, index) => {

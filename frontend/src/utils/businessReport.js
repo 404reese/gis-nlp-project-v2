@@ -11,6 +11,23 @@ function rows(items) {
     .join('');
 }
 
+function revenueSection(r) {
+  if (!r) return '';
+  const body = r.scenarios
+    .map(
+      (s) => `<tr><td>${s.name}</td><td class="amt">${s.daily_customers}/day</td>
+        <td class="amt">${inr(s.monthly_revenue)}</td><td class="amt">${inr(s.monthly_profit)}</td>
+        <td class="amt">${s.payback_months != null ? s.payback_months + ' months' : 'not reached'}</td></tr>`
+    )
+    .join('');
+  return `<h2>Revenue &amp; break-even (modeled)</h2>
+  <table><tr class="note"><td>Scenario</td><td class="amt">Customers</td><td class="amt">Revenue/mo</td>
+    <td class="amt">Profit/mo</td><td class="amt">Payback</td></tr>${body}</table>
+  <p>Break-even needs about <b>${inr(r.breakeven_revenue)}</b> revenue per month
+     (~${r.breakeven_daily_customers} customers/day at ${inr(r.avg_ticket)} average ticket).</p>
+  <p class="note">${r.note}</p>`;
+}
+
 export function buildReportHTML(est) {
   const t = est.totals;
   const staff = (est.staff || [])
@@ -62,6 +79,8 @@ export function buildReportHTML(est) {
         <td class="amt">${inr(t.working_capital)}</td><td class="note">buffer before break-even</td></tr>
     <tfoot><tr><td>Total capital to start</td><td class="amt">${inr(t.startup_total)}</td><td></td></tr></tfoot>
   </table>
+
+  ${revenueSection(est.revenue)}
 
   ${assumptions ? `<h2>Assumptions</h2><ul>${assumptions}</ul>` : ''}
   <div class="disc">Rent basis: ${est.rent_basis}.<br>${est.disclaimer}</div>

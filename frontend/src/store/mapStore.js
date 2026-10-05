@@ -20,6 +20,18 @@ export const useMapStore = create((set) => ({
   setPickMode: (pickMode) => set({ pickMode }),
   togglePickMode: () => set((s) => ({ pickMode: !s.pickMode })),
 
+  // Locations pinned for side-by-side comparison (max 3), labelled A/B/C.
+  pins: [],
+  addPin: (pin) =>
+    set((s) => {
+      if (s.pins.length >= 3) return s;
+      const used = new Set(s.pins.map((p) => p.label));
+      const label = ['A', 'B', 'C'].find((l) => !used.has(l));
+      return { pins: [...s.pins, { ...pin, label }] };
+    }),
+  removePin: (label) => set((s) => ({ pins: s.pins.filter((p) => p.label !== label) })),
+  clearPins: () => set({ pins: [] }),
+
   // Which layer source ids actually exist in Martin's catalog (i.e. have data/tables).
   available: {},
   setAvailable: (available) => set({ available }),
