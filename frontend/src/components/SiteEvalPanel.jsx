@@ -106,7 +106,13 @@ function BusinessTab({ point }) {
 
       {data && (
         <div className="mt-3 space-y-3">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="rounded-xl border border-outline-variant/40 bg-surface-container-highest/40 px-3 py-2">
+              <div className="text-xs text-on-surface-variant">Store area</div>
+              <div className="text-lg font-headline text-on-surface">
+                {data.size_sqft != null ? `${Number(data.size_sqft).toLocaleString('en-IN')} sqft` : '—'}
+              </div>
+            </div>
             <div className="rounded-xl border border-outline-variant/40 bg-surface-container-highest/40 px-3 py-2">
               <div className="text-xs text-on-surface-variant">Startup total</div>
               <div className="text-lg font-headline text-on-surface">{fmtINR(data.totals?.startup_total)}</div>
@@ -117,7 +123,7 @@ function BusinessTab({ point }) {
             </div>
           </div>
           <div className="text-xs font-body text-on-surface-variant">
-            Rent {data.rent_measured ? '(data-grounded)' : '(city default)'}: {data.rent_basis}
+            Rent {data.rent_measured ? '(estimated from nearby sale prices)' : '(city default)'}: {data.rent_basis}
           </div>
           {data.summary && (
             <p className="text-sm font-body leading-relaxed text-on-surface">{data.summary}</p>
@@ -167,7 +173,7 @@ function BusinessTab({ point }) {
 /* ---- the site card --------------------------------------------------------- */
 function SiteCard({ data }) {
   const comps = data.comps || {};
-  const maxBhkPsf = Math.max(1, ...(comps.by_bhk || []).map((b) => b.median_psf || 0));
+  const maxSizePsf = Math.max(1, ...(comps.by_size || []).map((b) => b.median_psf || 0));
   const vs = data.vs_city;
 
   return (
@@ -201,15 +207,15 @@ function SiteCard({ data }) {
                 Typical band {fmtPsf(comps.band_psf.low)} – {fmtPsf(comps.band_psf.high)}
               </div>
             )}
-            {comps.by_bhk?.length > 0 && (
+            {comps.by_size?.length > 0 && (
               <div className="mt-3 space-y-1.5">
-                {comps.by_bhk.map((b) => (
-                  <div key={b.bhk} className="flex items-center gap-2">
-                    <span className="w-10 text-xs font-body text-on-surface-variant">{b.bhk} BHK</span>
+                {comps.by_size.map((b) => (
+                  <div key={b.label} className="flex items-center gap-2">
+                    <span className="w-24 text-xs font-body text-on-surface-variant">{b.label}</span>
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-surface-container-highest/60">
                       <div
                         className="h-full rounded-full bg-primary/70"
-                        style={{ width: `${((b.median_psf || 0) / maxBhkPsf) * 100}%` }}
+                        style={{ width: `${((b.median_psf || 0) / maxSizePsf) * 100}%` }}
                       />
                     </div>
                     <span className="w-24 text-right text-xs font-body text-on-surface">{fmtPsf(b.median_psf)}</span>
@@ -353,7 +359,7 @@ export default function SiteEvalPanel() {
 
       {/* Result panel (right side) */}
       {point && (
-        <aside className="absolute right-4 top-16 bottom-4 z-20 flex w-[360px] max-w-[85vw] flex-col overflow-hidden rounded-2xl border border-outline-variant/50 bg-surface/97 shadow-soft backdrop-blur">
+        <aside className="absolute right-4 top-16 bottom-4 z-20 flex w-[360px] max-w-[85vw] flex-col overflow-hidden rounded-2xl border border-outline-variant/50 bg-surface/95 shadow-soft backdrop-blur">
           <header className="flex items-start justify-between gap-2 px-4 py-3">
             <div className="min-w-0">
               <div className="truncate font-headline text-lg text-on-surface">

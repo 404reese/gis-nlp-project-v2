@@ -3,7 +3,7 @@
 Given a clicked lat/lng, this grounds a real-estate site card entirely in the PostGIS
 data we already loaded (see docs/ARCHITECTURE.md):
 
-  * comps      — nearby listings -> median price-per-sqft, price band, per-BHK breakdown
+  * comps      — nearby listings -> median price-per-sqft, price band, per-size-band (sqft) breakdown
   * vs_city    — how the local ₹/sqft compares to the whole-city median (a percentile-ish read)
   * transit    — nearest stop of each mode (metro / rail / bus) and its distance
   * amenities  — counts of POIs within the radius, bucketed into human categories
@@ -57,10 +57,21 @@ def _median(values: list[float]) -> float | None:
     return s[mid] if n % 2 else (s[mid - 1] + s[mid]) / 2
 
 
+SIZE_BANDS = [(0, 500), (500, 1000), (1000, 2000), (2000, float("inf"))]
+
+
+def _band_label(lo: float, hi: float) -> str:
+    if lo == 0:
+        return f"< {hi:g} sqft"
+    if hi == float("inf"):
+        return f"{lo:g}+ sqft"
+    return f"{lo:g}–{hi:g} sqft"
+
+
 async def _comps(conn, lat: float, lng: float, city_id: int, radius_m: int) -> dict:
     rows = (await conn.execute(text(
         """
-        SELECT bhk, area_sqft, price, price_unit
+        SELECT area_sqft, price, price_unit
         FROM realestate.listing
         WHERE city_id = :c AND area_sqft > 100 AND price > 0
           AND ST_DWithin(geom::geography,
@@ -69,14 +80,16 @@ async def _comps(conn, lat: float, lng: float, city_id: int, radius_m: int) -> d
     ), {"c": city_id, "lng": lng, "lat": lat, "r": radius_m})).fetchall()
 
     all_psf: list[float] = []
-    by_bhk: dict[int, list[float]] = {}
-    for bhk, area, price, unit in rows:
+    by_size: dict[int, list[float]] = {}
+    for area, price, unit in rows:
         v = _psf(price, unit, area)
         if v is None:
             continue
         all_psf.append(v)
-        if bhk:
-            by_bhk.setdefault(int(bhk), []).append(v)
+        for i, (lo, hi) in enumerate(SIZE_BANDS):
+            if lo <= area < hi:
+                by_size.setdefault(i, []).append(v)
+                break
 
     med = _median(all_psf)
     all_psf.sort()
@@ -86,9 +99,9 @@ async def _comps(conn, lat: float, lng: float, city_id: int, radius_m: int) -> d
         hi = all_psf[min(len(all_psf) - 1, int(len(all_psf) * 0.90))]
         band = {"low": round(lo), "high": round(hi)}
 
-    bhk_breakdown = [
-        {"bhk": k, "median_psf": round(_median(v)), "count": len(v)}
-        for k, v in sorted(by_bhk.items())
+    size_breakdown = [
+        {"label": _band_label(*SIZE_BANDS[k]), "median_psf": round(_median(v)), "count": len(v)}
+        for k, v in sorted(by_size.items())
         if len(v) >= 2  # don't publish a "median" off a single listing
     ]
 
@@ -96,7 +109,7 @@ async def _comps(conn, lat: float, lng: float, city_id: int, radius_m: int) -> d
         "count": len(all_psf),
         "median_psf": round(med) if med else None,
         "band_psf": band,
-        "by_bhk": bhk_breakdown,
+        "by_size": size_breakdown,
     }
 
 

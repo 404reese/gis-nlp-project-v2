@@ -111,11 +111,18 @@ async def estimate_business(business_type: str, lat: float, lng: float, city_id:
     psf, n = await _local_psf(lat, lng, city_id)
     if psf:
         rent_psf_month = psf * SALE_TO_MONTHLY_RENT * COMMERCIAL_RENT_PREMIUM
-        rent_basis = f"grounded in {n} nearby listings (median ≈ ₹{psf:,.0f}/sqft sale value)"
+        rent_basis = (
+            f"estimated ₹{rent_psf_month:,.1f}/sqft/month (₹{rent_psf_month * 12:,.0f}/sqft/year) × {size} sqft. "
+            f"Derived, not a listed rent: median sale value of {n} nearby listings "
+            f"(₹{psf:,.0f}/sqft) × {SALE_TO_MONTHLY_RENT:.1%} monthly yield × "
+            f"{COMMERCIAL_RENT_PREMIUM:.2f} commercial premium"
+        )
         measured = True
     else:
         rent_psf_month = 120.0
-        rent_basis = "no nearby listings found — used a city default (₹120/sqft/mo)"
+        rent_basis = (
+            f"no nearby listings found — city default ₹{rent_psf_month:,.0f}/sqft/month × {size} sqft"
+        )
         measured = False
     monthly_rent = int(round(rent_psf_month * size))
     deposit = monthly_rent * DEPOSIT_MONTHS
@@ -188,5 +195,6 @@ async def estimate_business(business_type: str, lat: float, lng: float, city_id:
         "assumptions": assumptions,
         "summary": summary,
         "disclaimer": "Indicative estimate for planning only; not financial advice. "
-                      "Location-dependent rent is data-grounded; other line items are modeled.",
+                      "Rent is estimated from nearby sale prices (no rental listings in the dataset); "
+                      "other line items are modeled.",
     }
