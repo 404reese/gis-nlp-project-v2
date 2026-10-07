@@ -1,0 +1,12 @@
+{
+  "timestamp": "20261007-095042",
+  "model": "openai/gpt-oss-120b",
+  "temperature": null,
+  "runs": 1,
+  "configs": [
+    "full",
+    "direct_llm"
+  ],
+  "n_questions": 3,
+  "city_id": 1
+}

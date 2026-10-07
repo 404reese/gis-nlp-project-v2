@@ -69,8 +69,8 @@ QUESTIONS = [
          question="Where are the metro stops?",
          gold="SELECT name, geom FROM transport.stop WHERE city_id = 1 AND mode = 'metro'"),
     dict(id="F09", category="filter", difficulty="easy",
-         question="Show all tram stops.",
-         gold="SELECT name, geom FROM transport.stop WHERE city_id = 1 AND mode = 'tram'"),
+         question="Show the fire stations.",
+         gold="SELECT name, geom FROM poi.place WHERE city_id = 1 AND category = 'fire_station'"),
     dict(id="F10", category="filter", difficulty="easy",
          question="Show the motorways.",
          gold="SELECT name, geom FROM roads.segment WHERE city_id = 1 AND highway_class = 'motorway'"),
@@ -173,9 +173,9 @@ QUESTIONS = [
          gold=("SELECT locality AS name, geom FROM realestate.listing WHERE city_id = 1 AND bhk >= 3 "
                "AND ((lower(price_unit) = 'cr' AND price < 1) OR lower(price_unit) = 'l')")),
     dict(id="L02", category="listing", difficulty="medium",
-         question="Listings larger than 1500 sqft.",
+         question="Listings larger than 3000 sqft.",
          gold="SELECT locality AS name, geom FROM realestate.listing "
-              "WHERE city_id = 1 AND area_sqft > 1500"),
+              "WHERE city_id = 1 AND area_sqft > 3000"),
     dict(id="L03", category="listing", difficulty="medium",
          question="Ready-to-move listings under 50 lakh.",
          gold=("SELECT locality AS name, geom FROM realestate.listing WHERE city_id = 1 "
@@ -201,10 +201,10 @@ QUESTIONS = [
                "AND EXISTS (SELECT 1 FROM transport.stop s WHERE s.city_id = 1 AND s.mode = 'metro' "
                "AND ST_DWithin(a.geom::geography, s.geom::geography, 2000))")),
     dict(id="C03", category="compositional", difficulty="hard",
-         question="Areas with no hospital within 1 km.",
+         question="Areas with no hospital within 500 m.",
          gold=("SELECT a.name, a.geom FROM crime.area a WHERE a.city_id = 1 "
                f"AND NOT EXISTS (SELECT 1 FROM poi.place h WHERE h.city_id = 1 AND h.category IN {HOSPITAL} "
-               "AND ST_DWithin(a.geom::geography, h.geom::geography, 1000))")),
+               "AND ST_DWithin(a.geom::geography, h.geom::geography, 500))")),
     dict(id="C04", category="compositional", difficulty="hard",
          question="Schools in Bandra that are within 500 m of a bus stop.",
          gold=(f"SELECT DISTINCT p.name, p.geom FROM poi.place p {_in_area('Bandra')} "

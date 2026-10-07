@@ -117,7 +117,8 @@ def make_plots(out: Path, records: list[dict]) -> list[str]:
         written.append("bench_baseline.png")
 
     # 4. latency ------------------------------------------------------------------------------
-    cfgs = engine + (["direct_llm"] if direct else [])
+    cfgs = [c for c in engine + (["direct_llm"] if direct else [])
+            if any(r["config"] == c and r.get("latency_s") is not None for r in records)]
     if cfgs:
         med, p95 = [], []
         for c in cfgs:

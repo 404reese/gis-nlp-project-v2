@@ -57,6 +57,19 @@ Run `--validate-gold` first and fix or drop any gold query it flags (error, empt
 `skipped.json`. A full run makes roughly 39 × (about 3 calls per engine config + 1 for the baseline)
 × runs LLM calls; use `--sleep` if you hit rate limits.
 
+## Running on a free API tier
+
+* By default the runner skips the intent-check and explanation LLM calls (they do not change the SQL),
+  so each question costs 1 call plus repairs. `--full-pipeline` turns them back on.
+* `no_repair` is **derived** from the first attempt of each `full` run (the SQL is re-executed on the
+  database), so it costs no LLM calls and is a paired comparison.
+* `--max-calls N` stops cleanly after N LLM calls; a hit API quota also stops the run cleanly. Everything
+  finished is saved. Continue with `--resume <results folder>` (same `--configs`) the next day.
+* Suggested order: `--configs full no_repair` (about 45 calls), then `--configs direct_llm` (39), then
+  `--configs table_names_only` (39 or more because it triggers more repairs), each with `--resume`.
+* `--summarize-only <folder>` rebuilds the summary and charts from saved results (no DB, no LLM), so the
+  charts can be drawn with any Python that has matplotlib.
+
 ## Status and caveats
 
 * The gold SQL has been **linted** (single read-only SELECT, `geom` column, `city_id` filter on every

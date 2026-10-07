@@ -54,18 +54,26 @@ CITY_ID = 1
 
 
 # ───────────────────────────── LLM wrapper (shared by every config) ─────────────────────────────
+class RateLimited(RuntimeError):
+    """Raised when the API quota is exhausted or the per-run call budget is used up.
+    The runner stops, keeps everything finished so far, and prints how to resume."""
+
+
 class LLM:
     """Same chat-completions call as app/services/groq_client.py, with the model selectable,
-    optional fixed temperature, retries on rate limits, and a call counter."""
+    optional fixed temperature, retries on rate limits, a call counter and a call budget."""
 
-    def __init__(self, model: str, temperature: float | None, sleep: float):
+    def __init__(self, model: str, temperature: float | None, sleep: float, max_calls: int | None = None):
         from app.config import settings
         self.key = settings.GROQ_API_KEY
         self.model, self.temperature, self.sleep = model, temperature, sleep
+        self.max_calls = max_calls
         self.calls = 0
 
     def __call__(self, prompt: str) -> str:
         import requests
+        if self.max_calls is not None and self.calls >= self.max_calls:
+            raise RateLimited(f"call budget of {self.max_calls} reached")
         payload = {"model": self.model, "messages": [{"role": "user", "content": prompt}]}
         if self.temperature is not None:
             payload["temperature"] = self.temperature
@@ -75,14 +83,22 @@ class LLM:
                 headers={"Authorization": f"Bearer {self.key}", "Content-Type": "application/json"},
                 json=payload, timeout=120,
             )
-            if r.status_code == 429 or r.status_code >= 500:
+            if r.status_code == 429:
+                try:
+                    wait = float(r.headers.get("retry-after") or 0)
+                except ValueError:
+                    wait = 0.0
+                if wait > 90 or attempt == 4:  # a long wait means the daily quota is gone
+                    raise RateLimited(f"API rate limit (retry-after {wait:.0f}s): {r.text[:160]}")
+                time.sleep(max(wait, 2 ** attempt * 2))
+                continue
+            if r.status_code >= 500:
                 time.sleep(min(2 ** attempt * 2, 30))
                 continue
             r.raise_for_status()
             self.calls += 1
             time.sleep(self.sleep)
             return r.json()["choices"][0]["message"]["content"]
-        r.raise_for_status()
         raise RuntimeError("LLM call failed after retries")
 
 
@@ -167,8 +183,19 @@ def patched(module, **attrs):
             setattr(module, k, v)
 
 
-def config_patches(ge, name: str, llm: LLM) -> dict:
+async def _no_interpret(question, city):
+    return {"is_clear": True, "task_type": "other", "message": ""}
+
+
+async def _no_explain(question, sql, features, count, city):
+    return ""
+
+
+def config_patches(ge, name: str, llm: LLM, skip_aux: bool = True) -> dict:
     patches = {"call_groq": llm}
+    if skip_aux:  # intent check and explanation do not change the SQL, so skip their LLM calls
+        patches["_agent_interpret"] = _no_interpret
+        patches["_agent_explain"] = _no_explain
     if name == "no_repair":
         patches["MAX_REPAIRS"] = -1  # loop runs range(MAX_REPAIRS + 2) = 1 attempt
     elif name == "table_names_only":
@@ -182,9 +209,9 @@ def config_patches(ge, name: str, llm: LLM) -> dict:
     return patches
 
 
-async def run_engine(ge, name: str, q: dict, gold_fc: dict, llm: LLM) -> dict:
+async def run_engine(ge, name: str, q: dict, gold_fc: dict, llm: LLM, skip_aux: bool = True) -> dict:
     calls0, t0 = llm.calls, time.perf_counter()
-    with patched(ge, **config_patches(ge, name, llm)):
+    with patched(ge, **config_patches(ge, name, llm, skip_aux)):
         res = await ge.run_nl_query(q["question"], CITY_ID)
     latency = time.perf_counter() - t0
     attempts = res.get("attempts") or []
@@ -197,9 +224,31 @@ async def run_engine(ge, name: str, q: dict, gold_fc: dict, llm: LLM) -> dict:
         failed_attempts=sum(1 for a in attempts if a.get("error")),
         sql=res.get("sql"),
         message=(res.get("message") or "")[:200],
+        first_attempt=attempts[0] if attempts else None,
     )
     rec.update(score_engine(pred, gold_fc, q["ordered"]))
     rec.update(llm_calls=llm.calls - calls0, latency_s=round(latency, 2))
+    return rec
+
+
+async def derive_no_repair(ge, q: dict, gold_fc: dict, full_rec: dict) -> dict:
+    """`no_repair` = what the engine would have returned after only its FIRST attempt. That attempt
+    is already recorded in the `full` run (same prompt, same sampling), so re-execute its SQL on
+    the database and score it: a paired comparison that costs no extra LLM calls."""
+    fa = full_rec.get("first_attempt") or {}
+    sql, err = fa.get("sql"), fa.get("error")
+    pred = None
+    if sql and not err:
+        try:
+            pred, _ = await ge._execute_to_geojson(sql, CITY_ID)
+        except Exception:  # noqa: BLE001
+            pred = None
+    rec = dict(executed=pred is not None, clarified=full_rec.get("clarified", False),
+               non_empty=bool(pred and pred["features"]), attempts=1,
+               failed_attempts=0 if pred is not None else 1, sql=sql, derived=True,
+               message="derived from the first attempt of the full run", first_attempt=fa)
+    rec.update(score_engine(pred, gold_fc, q["ordered"]))
+    rec.update(llm_calls=0, latency_s=None)
     return rec
 
 
@@ -241,6 +290,8 @@ Return STRICT JSON only:
     try:
         data = ge.parse_json_safely(llm(prompt))
         places = [p for p in data.get("places", []) if isinstance(p, dict)]
+    except RateLimited:
+        raise
     except Exception:  # noqa: BLE001
         places = []
     latency = time.perf_counter() - t0
@@ -337,6 +388,12 @@ async def cmd_validate_gold() -> int:
     return 1 if bad else 0
 
 
+def _load_records(raw_path: Path) -> list[dict]:
+    if not raw_path.exists():
+        return []
+    return [json.loads(line) for line in raw_path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
 async def cmd_run(args) -> int:
     import app.services.geo_engine as ge
     from app.db_spatial import dispose_engines
@@ -344,16 +401,32 @@ async def cmd_run(args) -> int:
     questions = [q for q in QUESTIONS if not args.only or q["id"] in args.only]
     if args.limit:
         questions = questions[: args.limit]
-    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    out = OUT_ROOT / stamp
-    out.mkdir(parents=True, exist_ok=True)
-    llm = LLM(args.model, args.temperature, args.sleep)
 
-    meta = dict(timestamp=stamp, model=args.model, temperature=args.temperature, runs=args.runs,
-                configs=args.configs, n_questions=len(questions), city_id=CITY_ID)
+    if args.resume:
+        out = Path(args.resume)
+        if not out.is_absolute():
+            out = ROOT / out
+        meta = json.loads((out / "meta.json").read_text())
+        meta["configs"] = sorted(set(meta["configs"]) | set(args.configs))
+        meta["runs"] = max(meta["runs"], args.runs)
+        meta["n_questions"] = len(questions)
+        records = _load_records(out / "raw.jsonl")
+        print(f"Resuming {out.name}: {len(records)} results already saved.")
+    else:
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        out = OUT_ROOT / stamp
+        out.mkdir(parents=True, exist_ok=True)
+        meta = dict(timestamp=stamp, model=args.model, temperature=args.temperature, runs=args.runs,
+                    configs=args.configs, n_questions=len(questions), city_id=CITY_ID)
+        records = []
     (out / "meta.json").write_text(json.dumps(meta, indent=2))
+    llm = LLM(args.model, args.temperature, args.sleep, args.max_calls)
+    skip_aux = not args.full_pipeline
 
-    records, skipped = [], []
+    order = {c: i for i, c in enumerate(ALL_CONFIGS)}  # `full` always runs before `no_repair`
+    configs = sorted(args.configs, key=order.get)
+    by_key = {(r["config"], r["qid"], r["run"]): r for r in records}
+    skipped, stopped = [], None
     try:
         gold = {}
         for q in questions:
@@ -366,35 +439,61 @@ async def cmd_run(args) -> int:
             print("Skipping questions with unusable gold:", ", ".join(s["id"] for s in skipped))
         (out / "skipped.json").write_text(json.dumps(skipped, indent=2))
 
-        total = len(gold) * len(args.configs) * args.runs
-        done = 0
-        with open(out / "raw.jsonl", "w", encoding="utf-8") as raw:
-            for run in range(args.runs):
-                for cfg in args.configs:
-                    for q in questions:
-                        if q["id"] not in gold:
-                            continue
-                        try:
-                            rec = (await run_direct(ge, q, gold[q["id"]], llm) if cfg == "direct_llm"
-                                   else await run_engine(ge, cfg, q, gold[q["id"]], llm))
-                        except Exception as exc:  # noqa: BLE001 - one bad call must not kill the run
-                            rec = dict(executed=False, clarified=False, non_empty=False, attempts=0,
-                                       failed_attempts=0, sql=None, message=f"runner error: {exc}"[:200],
-                                       exact=False if cfg != "direct_llm" else None, f1=0.0 if cfg != "direct_llm" else None,
-                                       latency_s=None, llm_calls=0)
-                        rec.update(config=cfg, qid=q["id"], category=q["category"],
-                                   difficulty=q["difficulty"], run=run, n_gold=len(geom_set(gold[q["id"]])))
-                        records.append(rec)
-                        raw.write(json.dumps(rec, ensure_ascii=False) + "\n")
-                        raw.flush()
-                        done += 1
-                        print(f"[{done}/{total}] {cfg:<17} {q['id']} run{run} "
-                              f"exact={rec.get('exact')} f1={rec.get('f1')}")
+        todo = [(run, cfg, q) for run in range(args.runs) for cfg in configs for q in questions
+                if q["id"] in gold and (cfg, q["id"], run) not in by_key]
+        print(f"{len(todo)} results to produce"
+              + (f", budget {args.max_calls} LLM calls" if args.max_calls else "") + ".")
+        with open(out / "raw.jsonl", "a", encoding="utf-8") as raw:
+            for done, (run, cfg, q) in enumerate(todo, 1):
+                try:
+                    base = by_key.get(("full", q["id"], run))
+                    if cfg == "no_repair" and base and base.get("first_attempt") is not None:
+                        rec = await derive_no_repair(ge, q, gold[q["id"]], base)
+                    elif cfg == "direct_llm":
+                        rec = await run_direct(ge, q, gold[q["id"]], llm)
+                    else:
+                        rec = await run_engine(ge, cfg, q, gold[q["id"]], llm, skip_aux)
+                except RateLimited as exc:
+                    stopped = str(exc)
+                    break
+                except Exception as exc:  # noqa: BLE001 - one bad call must not kill the run
+                    rec = dict(executed=False, clarified=False, non_empty=False, attempts=0,
+                               failed_attempts=0, sql=None, message=f"runner error: {exc}"[:200],
+                               exact=False if cfg != "direct_llm" else None,
+                               f1=0.0 if cfg != "direct_llm" else None, latency_s=None, llm_calls=0)
+                rec.update(config=cfg, qid=q["id"], category=q["category"], difficulty=q["difficulty"],
+                           run=run, n_gold=len(geom_set(gold[q["id"]])))
+                records.append(rec)
+                by_key[(cfg, q["id"], run)] = rec
+                raw.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                raw.flush()
+                print(f"[{done}/{len(todo)}] {cfg:<17} {q['id']} run{run} "
+                      f"exact={rec.get('exact')} f1={rec.get('f1')}  (LLM calls so far: {llm.calls})")
     finally:
         await dispose_engines()
 
+    if records:
+        write_summary(out, records, meta)
+    print(f"\nResults in {out}   ({llm.calls} LLM calls this session)")
+    if stopped:
+        print(f"\nSTOPPED: {stopped}\nEverything finished so far is saved. Continue later with:\n"
+              f"  app\\venv\\Scripts\\python eval\\nl2sql\\run_benchmark.py --resume \"{out}\" "
+              f"--configs {' '.join(args.configs)} --runs {args.runs}")
+    return 0
+
+
+def cmd_summarize(folder: str) -> int:
+    """Rebuild summary + charts from raw.jsonl (no DB, no LLM). Works with any Python that has matplotlib."""
+    out = Path(folder)
+    if not out.is_absolute():
+        out = ROOT / out
+    records = _load_records(out / "raw.jsonl")
+    if not records:
+        print("no results in", out)
+        return 1
+    meta = json.loads((out / "meta.json").read_text())
     write_summary(out, records, meta)
-    print(f"\nResults in {out}")
+    print("Rewrote summary and charts in", out)
     return 0
 
 
@@ -406,6 +505,10 @@ def _mean(xs):
 
 def _pct(x):
     return "n/a" if x is None else f"{100 * x:.1f}%"
+
+
+def _num(x, spec=".1f"):
+    return "n/a" if x is None else format(x, spec)
 
 
 def _p95(xs):
@@ -454,7 +557,7 @@ def write_summary(out: Path, records: list[dict], meta: dict) -> None:
             continue
         md.append(f"| {r['config']} | {r['n']} | {_pct(r['exact'])} | {_pct(r['f1'])} | {_pct(r['name_f1'])} | "
                   f"{_pct(r['executed'])} | {_pct(r['non_empty'])} | {_pct(r['clarified'])} | "
-                  f"{r['attempts']:.2f} | {r['llm_calls']:.2f} | {r['lat_med']:.1f} | {r['lat_p95']:.1f} |")
+                  f"{_num(r['attempts'], '.2f')} | {_num(r['llm_calls'], '.2f')} | {_num(r['lat_med'])} | {_num(r['lat_p95'])} |")
 
     md += ["\n## Execution accuracy by question category\n",
            "| config | " + " | ".join(cats) + " |", "|---|" + "---|" * len(cats)]
@@ -473,7 +576,7 @@ def write_summary(out: Path, records: list[dict], meta: dict) -> None:
                "| n | names that exist in the DB | points within 150 m of a real feature | "
                "points within 200 m of a gold feature | median s |", "|---|---|---|---|---|",
                f"| {d['n']} | {_pct(d['name_grounded'])} | {_pct(d['coord_grounded'])} | "
-               f"{_pct(d['precision_gold'])} | {d['lat_med']:.1f} |",
+               f"{_pct(d['precision_gold'])} | {_num(d['lat_med'])} |",
                "\nThe baseline returns no SQL, so its answers cannot be checked or reproduced."]
 
     failures = [r for r in records if r["config"] == "full" and not r.get("exact")]
@@ -483,6 +586,9 @@ def write_summary(out: Path, records: list[dict], meta: dict) -> None:
         for r in failures:
             md.append(f"| {r['qid']} | {r['executed']} | {r.get('n_pred')} | {r['n_gold']} | "
                       f"{_pct(r.get('f1'))} | {r['attempts']} |")
+    if any(r["config"] == "no_repair" and r.get("derived") for r in records):
+        md.append("\n`no_repair` is derived from the first attempt of each `full` run (paired comparison, "
+                  "no extra LLM calls), so it has no latency of its own.")
     (out / "summary.md").write_text("\n".join(md), encoding="utf-8")
 
     # Typst table for the paper
@@ -493,7 +599,7 @@ def write_summary(out: Path, records: list[dict], meta: dict) -> None:
            "  [*Configuration*], [*Exact*], [*Geom. F1*], [*Executed*], [*Median s*],"]
     for r in eng:
         typ.append(f"  [{label.get(r['config'], r['config'])}], [{_pct(r['exact'])}], [{_pct(r['f1'])}], "
-                   f"[{_pct(r['executed'])}], [{r['lat_med']:.1f}],")
+                   f"[{_pct(r['executed'])}], [{_num(r['lat_med'])}],")
     typ.append(")")
     (out / "paper_table.typ").write_text("\n".join(typ), encoding="utf-8")
 
@@ -505,6 +611,11 @@ def write_summary(out: Path, records: list[dict], meta: dict) -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--resume", metavar="FOLDER", help="continue a stopped run: skip results already saved there")
+    ap.add_argument("--max-calls", type=int, help="stop after this many LLM calls (free-tier budget); resume later")
+    ap.add_argument("--full-pipeline", action="store_true",
+                    help="also run the intent-check and explanation LLM calls (default: skip them, 1 call per question)")
+    ap.add_argument("--summarize-only", metavar="FOLDER", help="rebuild summary and charts from saved results")
     ap.add_argument("--lint", action="store_true", help="static checks of the gold SQL (no DB, no LLM)")
     ap.add_argument("--validate-gold", action="store_true", help="run gold SQL on the DB (no LLM)")
     ap.add_argument("--configs", nargs="+", default=ENGINE_CONFIGS + ["direct_llm"], choices=ALL_CONFIGS)
@@ -516,6 +627,8 @@ def main() -> int:
     ap.add_argument("--limit", type=int, help="run only the first N questions (smoke test)")
     args = ap.parse_args()
 
+    if args.summarize_only:
+        return cmd_summarize(args.summarize_only)
     if args.lint:
         return cmd_lint()
     if args.validate_gold:
