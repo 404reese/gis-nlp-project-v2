@@ -52,57 +52,51 @@
 
 // Global edge styling
 #let edge-style = (stroke: 1.5pt + dark-blue, corner-radius: 6pt)
+#let retry-style = (stroke: (paint: dark-blue, thickness: 1.5pt, dash: "dashed"), corner-radius: 6pt)
 #let box-style = (fill: light-bg, stroke: 1.5pt + border-gray, corner-radius: 5pt, layer: -1, inset: 1.2em)
 
+// Pipeline of the NL -> PostGIS engine (app/services/geo_engine.py):
+// intent check -> SQL generation -> validation -> read-only execution -> repair loop
+// -> GeoJSON + explanation + SQL -> map. Left column runs down, right column runs up.
 #align(center)[
   #diagram(
-    // Sets the base global unit spacing. (x, y) 
-    spacing: (13em, 4em), 
-    
+    // Sets the base global unit spacing. (x, y)
+    spacing: (13em, 4em),
+
     // --- 1. ENCLOSURE LABELS ---
     node((0, -0.5), [*Input*], name: <L_In>),
-    node((0, 0.7), [*Processing*], name: <L_Proc>,),
-    node((1, -0.5), [*Backend*], name: <L_Back>),
-    node((1, 1.7), [*Output*], name: <L_Out>),
+    node((0, 0.7), [*Query generation*], name: <L_Proc>),
+    node((1, -0.5), [*Output*], name: <L_Out>),
+    node((1, 1.7), [*Backend*], name: <L_Back>),
 
     // --- 2. NODES ---
-    // Column 0 (Left Side)
-    draw-node((0,0), <A>, "👤", "User Input:", "Natural Language Query"),
-    
-    draw-node((0,1), <B>, "🧠", "NLP Processing:", "Intent + Entities"),
-    draw-node((0,2), <C>, "🌐", "Geocoding:", "Place " + sym.arrow.r + " Coordinates"),
-    draw-node((0,3), <D>, "🗄️", "Query Engine: SQL", "Generation & Validation"),
-    
-    // Column 2 (Right Side)
-    draw-db-node((1,0), <E>, "🛢️", "Spatial DB:", "PostgreSQL + PostGIS"),
-    draw-node((1,1), <F>, "📋", "Decision/Scoring:", "Multi-factor Evaluation"),
-    
-    draw-node((1,2), <G>, "🗺️", "Result: GeoJSON", "+ Explanation"),
-    draw-node((1,3), <H>, "🖥️", "Visualization:", "Interactive Map + UI"),
+    // Column 0 (left, top to bottom)
+    draw-node((0, 0), <A>, "👤", "User Input:", "Natural Language Question"),
+    draw-node((0, 1), <B>, "🧠", "Intent Check (LLM):", "Clear query? else follow-up"),
+    draw-node((0, 2), <C>, "⚙️", "SQL Generation (LLM):", "Schema description in prompt"),
+    draw-node((0, 3), <D>, "🛡️", "Validation:", "Single read-only SELECT"),
+
+    // Column 1 (right, bottom to top)
+    draw-db-node((1, 3), <E>, "🛢️", "Execution: PostGIS", "geo_readonly, 15 s timeout"),
+    draw-node((1, 2), <F>, "🔁", "Repair Loop:", "On DB error or 0 rows (bounded)"),
+    draw-node((1, 1), <G>, "📋", "Result: GeoJSON", "+ Explanation + SQL"),
+    draw-node((1, 0), <H>, "🖥️", "Visualization:", "Interactive Map + UI"),
 
     // --- 3. BACKGROUND GROUP BOXES ---
     node(enclose: (<L_In>, <A>), ..box-style),
     node(enclose: (<L_Proc>, <B>, <C>, <D>), ..box-style),
-    node(enclose: (<L_Back>, <E>, <F>), ..box-style),
     node(enclose: (<L_Out>, <G>, <H>), ..box-style),
+    node(enclose: (<L_Back>, <E>, <F>), ..box-style),
 
     // --- 4. EDGES ---
-    // A -> B (Leaves right of A, drops down, enters right of B)
-    edge(<A>, (0.4, 0), (0.4, 1), <B>, "-|>", ..edge-style),
-    
-    // B -> C (Straight down)
+    edge(<A>, <B>, "-|>", ..edge-style),
     edge(<B>, <C>, "-|>", ..edge-style),
-    
-    // C -> D (Straight down)
     edge(<C>, <D>, "-|>", ..edge-style),
-
-    // D -> E (Leaves right of D, travels up, enters left of E)
-    edge(<D>, (0.5, 3), (0.5, 0), <E>, "-|>", ..edge-style),
-
-    // F -> G (Leaves left of F, travels down, enters left of G)
-    edge(<F>, (0.6, 1), (0.6, 2), <G>, "-|>", ..edge-style),
-
-    // G -> H (Straight down)
+    edge(<D>, <E>, "-|>", ..edge-style),
+    // Repair: the error (or the empty result) goes back to the SQL generator.
+    edge(<F>, <C>, "-|>", label: text(size: 0.75em)[error / 0 rows: retry], label-side: left, ..retry-style),
+    edge(<E>, <F>, "-|>", ..edge-style),
+    edge(<F>, <G>, "-|>", ..edge-style),
     edge(<G>, <H>, "-|>", ..edge-style),
   )
 ]

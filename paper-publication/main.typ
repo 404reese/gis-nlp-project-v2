@@ -194,7 +194,7 @@ The system runs on a standard personal computer or laptop.
 The stack is primarily open source.
 
 #table(
-  columns: (auto, auto, 1fr),
+  columns: (auto, 3cm, 1fr),
   inset: 3pt,
   align: horizon,
   fill: (x, y) => if y == 0 { silver } else { none },
@@ -256,31 +256,6 @@ The `/dashboard` page is the original assistant view: a chat assistant that asks
 - Generality: the `city_id` tag and polygon-based ETL support other cities.
 - Cost efficiency: the stack uses open-source tools and open data.
 
-== Implementation Plan
-
-#table(
-  columns: (auto, auto, auto, auto),
-  inset: 3pt,
-  align: horizon,
-  fill: (x, y) => if y == 0 { silver } else { none },
-  stroke: 0.5pt + gray,
-
-  [*Phase\ No.*], [*Phase\ Name*], [*Duration*], [*Activities\ Involved*],
-
-  [1], [Requirement Analysis], [Week 1], [Understanding project objectives, identifying system requirements, and defining scope],
-  [2], [System Design], [Week 2], [Designing architecture and selecting technologies],
-  [3], [Data Collection & Setup], [Week 3], [Downloading OpenStreetMap data, setting up PostgreSQL + PostGIS],
-  [4], [Backend Development], [Week 4 to 5], [Developing APIs using FastAPI, integrating database connectivity],
-  [5], [Query Engine Development], [Week 6 to 7], [Building the LLM-based natural-language to PostGIS engine and testing spatial operations],
-  [6], [Frontend Development], [Week 8 to 9], [Building the React interface with MapLibre GL and vector-tile layers],
-  [7], [Decision Tools], [Week 10], [Implementing site evaluation, competition analysis and cost-to-open],
-  [8], [Integration & Testing], [Week 11], [Integrating all modules and system testing],
-  [9], [Deployment], [Week 12], [Deployment and final validation],
-  [10], [Documentation & Report], [Week 13], [Preparing final report, diagrams and presentation]
-)
-
-The plan covers about 13 weeks. #todo[confirm this schedule matches the actual timeline, since the architecture changed from the original plan]
-
 == Advantages And Limitation
 
 === Advantages
@@ -331,6 +306,30 @@ Compared with the POC, the Sentinel workspace replaces invented coordinates with
 == Qualitative Demonstration
 
 A query such as "hospitals within 1 km of a metro station" is turned into a spatial SQL query, executed, and drawn as an answer layer, with the explanation and the SQL available in the panel. Clicking a location opens a site report with price, access, amenity and safety information, and the Competition and Cost-to-open tabs extend it to a business decision. #todo[add screenshots of the map, an NL query result, the site report and the comparison table]
+
+== Comparative Analysis
+
+We compare the system along two axes: the query engine against its own ablations and against the direct-LLM approach of the POC, and the weighting schemes of the legacy area ranking.
+
+=== Query engine versus ablations and the direct-LLM baseline
+
+The benchmark in `eval/nl2sql/` contains 39 spatial questions in six categories (filters, proximity, named areas, rankings, listings and compositional queries), each with a hand-written gold SQL query. The expected answer is the executed result of the gold query, and a predicted layer is scored by comparing geometry sets (exact match and F1), so column names do not matter. Four configurations are compared: the full engine, the engine without the repair stage, the engine whose schema description lists only table names, and the direct-LLM baseline in which the model names places and coordinates without a database. The baseline returns no SQL, so it is scored on grounding: the share of returned names that exist in the database and the share of returned points that lie near a real feature.
+
+#todo[run the benchmark and add the results: the table `paper_table.typ` and the charts `bench_accuracy.png`, `bench_by_category.png`, `bench_baseline.png` and `bench_latency.png` written by `eval/nl2sql/run_benchmark.py`, then describe the differences between configurations, with counts and the spread over repeated runs]
+
+=== Weighting schemes of the legacy ranking
+
+The comparison of weighting schemes is described with the decision support models above. @fig-weight-tau shows how far each scheme's ranking is from the hand-picked one, and @fig-weight-oat shows how little the ranking changes when a single weight is changed by up to 30%.
+
+#figure(
+  image("figures/weight_tau_bar.png", width: 100%),
+  caption: [Rank agreement (Kendall's $tau$) of each weighting scheme with the hand-picked weights, and the overlap of the top-five areas.],
+) <fig-weight-tau>
+
+#figure(
+  image("figures/weight_oat_sensitivity.png", width: 100%),
+  caption: [One-at-a-time sensitivity: Kendall's $tau$ against the hand-picked ranking when one criterion's weight is changed by up to 30%, the others being renormalised.],
+) <fig-weight-oat>
 
 == Evaluation Status
 
