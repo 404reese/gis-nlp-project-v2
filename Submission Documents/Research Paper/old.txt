@@ -6,9 +6,9 @@
 #let todo(body) = text(fill: red, weight: "bold")[\[TODO: #body\]]
 
 #show: ieee.with(
-  title: [GeoQuery Sentinel: A Natural-Language Geospatial\ Query and Site-Evaluation System on PostGIS],
+  title: [GeoQuery:\ A Natural-Language Geospatial Query\ and Site-Evaluation System on PostGIS],
   abstract: [
-    Geospatial analysis supports urban planning, retail strategy and infrastructure decisions, yet traditional GIS platforms demand expertise in spatial query languages and specialised software. Large language models (LLMs) can lower this barrier, but systems that let the model answer directly tend to hallucinate place names and coordinates, which makes their output unverifiable. This paper presents GeoQuery Sentinel, a Felt-style layered web map driven by a natural-language to PostGIS query engine grounded in open data. A user asks a spatial question in English, for example "hospitals within 1 km of a metro station". An LLM writes a PostGIS query against a documented schema, the query is executed on real data, and the system returns a GeoJSON answer layer, a grounded explanation and the SQL itself, so every answer carries provenance. On top of the engine we build real-estate decision tools: a click-to-evaluate site report, a competition and catchment analysis, a cost-to-open and break-even estimator, and a side-by-side comparison of up to three candidate locations. The system runs on PostgreSQL 16 with PostGIS 3.4, serves vector tiles with Martin, and renders them with MapLibre GL. It is loaded with Mumbai data from OpenStreetMap, a 76,000-row house-price dataset and area-level crime data, and its ETL is designed to generalise to other cities. We describe the architecture, the decision models and their current limitations, and report a first benchmark of query accuracy on 39 spatial questions.
+    Geospatial analysis supports urban planning, retail strategy and infrastructure decisions, yet traditional GIS platforms demand expertise in spatial query languages and specialised software. Large language models (LLMs) can lower this barrier, but systems that let the model answer directly tend to hallucinate place names and coordinates, which makes their output unverifiable. This paper presents GeoQuery, a Felt-style layered web map driven by a natural-language to PostGIS query engine grounded in open data. A user asks a spatial question in English, for example "hospitals within 1 km of a metro station". An LLM writes a PostGIS query against a documented schema, the query is executed on real data, and the system returns a GeoJSON answer layer, a grounded explanation and the SQL itself, so every answer carries provenance. On top of the engine we build real-estate decision tools: a click-to-evaluate site report, a competition and catchment analysis, a cost-to-open and break-even estimator, and a side-by-side comparison of up to three candidate locations. The system runs on PostgreSQL 16 with PostGIS 3.4, serves vector tiles with Martin, and renders them with MapLibre GL. It is loaded with Mumbai data from OpenStreetMap, a 76,000-row house-price dataset and area-level crime data, and its ETL is designed to generalise to other cities. We describe the architecture, the decision models and their current limitations, and report a first benchmark of query accuracy on 39 spatial questions.
   ],
   authors: (
     (
@@ -45,7 +45,7 @@ A naive way to build such an interface is to let the LLM answer the question its
 
 The central idea of this work is to replace "the LLM hallucinates the answer" with "the LLM writes a structured spatial query that is executed on real data". Every output is then verifiable and reproducible, and the generated SQL is shown to the user as provenance.
 
-GeoQuery Sentinel implements this idea as a full-screen layered map with a natural-language query bar. Beyond exploratory queries, it supports decision-oriented work for prospective business owners: evaluating a clicked location, analysing local competition and catchment demand, estimating the cost to open a store, and comparing candidate sites. The main contributions are:
+GeoQuery implements this idea as a full-screen layered map with a natural-language query bar. Beyond exploratory queries, it supports decision-oriented work for prospective business owners: evaluating a clicked location, analysing local competition and catchment demand, estimating the cost to open a store, and comparing candidate sites. The main contributions are:
 
 + A natural-language to PostGIS query engine that grounds the LLM in a documented schema and returns a GeoJSON layer, an explanation and the executed SQL.
 + A real-data foundation: an ETL pipeline that loads OpenStreetMap, real-estate listings and crime data into a single spatial database, designed to work for any city.
@@ -66,7 +66,7 @@ OpenStreetMap (OSM) provides free, globally available data on roads, amenities a
 Existing systems tend to cover either visualization, query processing or decision support. We combine all three on one open-data stack, with the emphasis on verifiable query results.
 
 = Proposed System
-GeoQuery Sentinel lets users interact with geospatial data in plain English and then act on the results with decision tools. The primary workspace (`/studio`) is a full-screen map with a left panel of toggleable layers, a natural-language query bar, and panels for evaluating, comparing and costing locations.
+GeoQuery lets users interact with geospatial data in plain English and then act on the results with decision tools. The primary workspace (`/studio`) is a full-screen map with a left panel of toggleable layers, a natural-language query bar, and panels for evaluating, comparing and costing locations.
 
 @fig-system gives an overview of the system. A natural-language question is sent from the browser to the FastAPI backend, where an LLM pipeline checks the intent of the question, grounds it in the schema description and generates a PostGIS query. The query is validated and executed on the PostGIS database, a validation and correction loop retries it when the database returns an error or no rows, and the resulting rows are converted into a GeoJSON answer layer that MapLibre GL draws on the map. The stages are described in detail in the Methodology section.
 
@@ -103,7 +103,7 @@ GeoQuery Sentinel lets users interact with geospatial data in plain English and 
 
     node((1, 1), align(center)[*MapLibre Rendering*\ #text(size: 8pt, fill: luma(100))[_(Answer Layer)_]], fill: rgb("#e8f5e9"), stroke: 0.8pt + rgb("#2e7d32")),
   ),
-  caption: [System overview of GeoQuery Sentinel: from a natural-language question to an answer layer on the map.],
+  caption: [System overview of GeoQuery: from a natural-language question to an answer layer on the map.],
 ) <fig-system>
 
 == Problem Statement and Objectives
@@ -151,7 +151,7 @@ The system is a modular pipeline. A question enters through the query bar, the b
       stage[MapLibre map, answer panel],
     )
   },
-  caption: [Natural-language query pipeline of GeoQuery Sentinel.],
+  caption: [Natural-language query pipeline of GeoQuery.],
 ) <fig-pipeline>
 
 === Explanation of Methodology
@@ -216,7 +216,7 @@ where $m'_(i k) = m_(i k)$ for benefit criteria (footfall, youth, access) and $m
 
 To test how much the ranking depends on these weights we ran a sensitivity study on the 40 scored areas (script in the `eval/` folder). We compared the hand-picked weights with equal weights, rank-order centroid (ROC) weights, AHP weights (consistency ratio 0.011), entropy weights, CRITIC weights and three scenario weight sets (budget, student and premium), and we compared the weighted sum with TOPSIS under the baseline weights. Agreement with the baseline ranking was measured by Kendall's $tau$ and by the overlap of the top five areas. We also perturbed each weight by up to 30% one at a time, and drew 1,000 random weight vectors from a uniform Dirichlet distribution (seed 42) to see how often each area stays in the top five.
 
-The ranking is stable under small changes to a single weight: the worst-case $tau$ for a 30% change in any one weight is 0.90 or higher (lowest for the access weight). It is not stable under a change of weighting scheme. AHP, ROC and the premium scenario keep the same top five as the baseline (Kendall $tau$ of 0.92, 0.81 and 0.83), while equal weights, entropy weights, the student scenario, the budget scenario, TOPSIS and CRITIC share only 2, 2, 2, 1, 1 and 0 of the baseline's top five areas ($tau$ of 0.41, 0.58, 0.87, -0.11, 0.36 and -0.01). Across random weight vectors the median $tau$ against the baseline is 0.33 (5th to 95th percentile: -0.49 to 0.84), and no area stays in the top five in more than 45% of draws (Andheri West is highest at 44.5%). The weights therefore encode a preference, not a neutral measurement, which is one reason the Sentinel workspace uses measured spatial queries in place of this fixed ranking. These results describe the 40-area scored dataset and should not be read as evidence about real-world site quality.
+The ranking is stable under small changes to a single weight: the worst-case $tau$ for a 30% change in any one weight is 0.90 or higher (lowest for the access weight). It is not stable under a change of weighting scheme. AHP, ROC and the premium scenario keep the same top five as the baseline (Kendall $tau$ of 0.92, 0.81 and 0.83), while equal weights, entropy weights, the student scenario, the budget scenario, TOPSIS and CRITIC share only 2, 2, 2, 1, 1 and 0 of the baseline's top five areas ($tau$ of 0.41, 0.58, 0.87, -0.11, 0.36 and -0.01). Across random weight vectors the median $tau$ against the baseline is 0.33 (5th to 95th percentile: -0.49 to 0.84), and no area stays in the top five in more than 45% of draws (Andheri West is highest at 44.5%). The weights therefore encode a preference, not a neutral measurement, which is one reason the GeoQuery workspace uses measured spatial queries in place of this fixed ranking. These results describe the 40-area scored dataset and should not be read as evidence about real-world site quality.
 
 == Details of Hardware and Software
 
@@ -287,7 +287,7 @@ The database holds all layers in EPSG:4326 with GiST indexes, and every row is t
 The ETL pipeline (`etl/`) ingests roads, transit, POIs and boundaries from OSM with polygon-based extraction, geocodes real-estate localities with Nominatim, and loads crime data. Because extraction is driven by a city polygon, the same pipeline can load other cities. The deployed instance is pre-loaded for Mumbai.
 
 ==== Legacy Dashboard
-The `/dashboard` page is the original assistant view: a chat assistant that asks clarifying questions and ranks areas, a Leaflet map with a heatmap by factor, a Top Locations panel with explanations, and a location detail view. Where an area has no scored metrics, the detail view borrows them from the nearest scored area. We keep it as the baseline against which the Sentinel workspace is compared.
+The `/dashboard` page is the original assistant view: a chat assistant that asks clarifying questions and ranks areas, a Leaflet map with a heatmap by factor, a Top Locations panel with explanations, and a location detail view. Where an area has no scored metrics, the detail view borrows them from the nearest scored area. We keep it as the baseline against which the GeoQuery workspace is compared.
 
 === Design Considerations
 - Verifiability: the SQL is always shown, and answers come from executed queries.
@@ -340,7 +340,7 @@ The system is implemented end to end. Table @tab-data lists the Mumbai data curr
   caption: [Mumbai data loaded in the current instance.],
 ) <tab-data>
 
-Compared with the POC, the Sentinel workspace replaces invented coordinates with coordinates from the database, replaces random marker jitter with real geometries, replaces raster Leaflet maps with vector tiles, and replaces fixed synthetic metrics with metrics computed from nearby listings, transit and amenities.
+Compared with the POC, the GeoQuery workspace replaces invented coordinates with coordinates from the database, replaces random marker jitter with real geometries, replaces raster Leaflet maps with vector tiles, and replaces fixed synthetic metrics with metrics computed from nearby listings, transit and amenities.
 
 == Qualitative Demonstration
 
@@ -370,14 +370,14 @@ The benchmark in `eval/nl2sql/` contains 39 spatial questions in six categories 
 The full engine returns exactly the gold layer for 29 of the 39 questions (74.4%, geometry F1 88.4%), and every generated query executed and returned rows (@tab-bench, @fig-bench-category). The repair stage was never triggered: all 39 first attempts executed and returned rows, so the first-attempt-only configuration scores identically, and this benchmark shows no benefit from repair. Accuracy is highest for named-area and ranking questions (both 100%) and lowest for listings (25%). Eight of the ten failures come from a row cap and not from a wrong query. The engine's schema notes tell the model to use `LIMIT 500`, so questions whose gold answer is larger than 500 rows (hospitals, listings, hospitals near two kinds of station) are truncated, and joined queries without `DISTINCT` let duplicate rows use up the limit (for example the banks near bus stops and the schools in Bandra near bus stops). The other two failures are over-inclusive category choices: universities were matched together with colleges, and motorways with a pattern broader than the gold road class. We count all ten as failures, but they point to the prompt rules and to the exact-match scoring more than to a lack of spatial reasoning.
 
 #figure(
-  image("figures/bench_by_category.png", width: 100%),
+  image("bench_by_category.png", width: 100%),
   caption: [Exact-match accuracy by question category. The first-attempt-only configuration is identical to the full engine because no repair was needed.],
 ) <fig-bench-category>
 
 The direct-LLM baseline gives a very different picture (@fig-bench-baseline). Only 19.5% of the place names it returned exist in the database, 57.0% of its coordinates lie within 150 m of some real feature, and only 10.6% lie within 200 m of a feature in the gold answer. The coordinate figure is generous, because Mumbai is dense and a random point is often near some point of interest, so the other two figures are more informative. The baseline also returns no SQL, so none of its answers can be checked. The median latency of the engine was 4.5 s (one LLM call plus the database, without the intent-check and explanation stages that the shipped engine adds) and that of the baseline 13.2 s. With 39 questions and one run, differences of a few questions should not be over-interpreted. A further ablation, in which the schema description lists only table names, is implemented in the benchmark code but was not run.
 
 #figure(
-  image("figures/bench_baseline.png", width: 100%),
+  image("bench_baseline.png", width: 100%),
   caption: [Grounding of the direct-LLM baseline (three left bars) next to the engine's geometry F1 against the gold answer (right bar). The metrics differ: the baseline bars show how much of its output is real, the engine bar its agreement with the gold layer.],
 ) <fig-bench-baseline>
 
@@ -386,12 +386,12 @@ The direct-LLM baseline gives a very different picture (@fig-bench-baseline). On
 The comparison of weighting schemes is described with the decision support models above. @fig-weight-tau shows how far each scheme's ranking is from the hand-picked one, and @fig-weight-oat shows how little the ranking changes when a single weight is changed by up to 30%.
 
 #figure(
-  image("figures/weight_tau_bar.png", width: 100%),
+  image("weight_tau_bar.png", width: 100%),
   caption: [Rank agreement (Kendall's $tau$) of each weighting scheme with the hand-picked weights, and the overlap of the top-five areas.],
 ) <fig-weight-tau>
 
 #figure(
-  image("figures/weight_oat_sensitivity.png", width: 100%),
+  image("weight_oat_sensitivity.png", width: 100%),
   caption: [One-at-a-time sensitivity: Kendall's $tau$ against the hand-picked ranking when one criterion's weight is changed by up to 30%, the others being renormalised.],
 ) <fig-weight-oat>
 
@@ -422,7 +422,7 @@ The main weakness of the current work is evaluation. The benchmark is small, was
 
 == Conclusion
 
-GeoQuery Sentinel shows that a natural-language interface to geospatial data can be built so that answers are computed on real data and are inspectable. By pairing a schema-grounded LLM with PostGIS, vector tiles and open data, it avoids the invented places and coordinates of direct LLM answers, and it extends the query engine with site evaluation, competition analysis, cost-to-open modelling and location comparison for practical decisions. The system is functional for Mumbai, and its ETL is designed to generalise. A first benchmark of 39 questions shows 74.4% exact-match accuracy against hand-written gold queries, with most failures caused by a row cap, whereas a direct-LLM baseline returns real place names only 19.5% of the time. A larger benchmark remains to be built.
+GeoQuery shows that a natural-language interface to geospatial data can be built so that answers are computed on real data and are inspectable. By pairing a schema-grounded LLM with PostGIS, vector tiles and open data, it avoids the invented places and coordinates of direct LLM answers, and it extends the query engine with site evaluation, competition analysis, cost-to-open modelling and location comparison for practical decisions. The system is functional for Mumbai, and its ETL is designed to generalise. A first benchmark of 39 questions shows 74.4% exact-match accuracy against hand-written gold queries, with most failures caused by a row cap, whereas a direct-LLM baseline returns real place names only 19.5% of the time. A larger benchmark remains to be built.
 
 == Future Scope
 + *Query reliability:* extend the benchmark (more questions, repeated runs, other models and harder queries that exercise the repair stage) in the style of Spider and BIRD @spider @bird @spatialt2s, and remove the row-cap and over-inclusion failures found here.
